@@ -1,0 +1,22 @@
+# Template for rlm_sql_postgresql. Enable the module using the package's
+# mods-enabled mechanism after reviewing the exact FreeRADIUS version.
+
+sql {
+    dialect = "postgresql"
+    driver = "rlm_sql_postgresql"
+    server = <AAA_DATABASE_HOST_FROM_SERVICE_REGISTRY>
+    port = 5432
+    login = <AAA_DATABASE_USER_FROM_SECRET_MANAGER>
+    password = <AAA_DATABASE_PASSWORD_FROM_SECRET_MANAGER>
+    database = fleet_aaa
+    radius_db = "postgresql"
+    acct_table1 = "radacct"
+    acct_table2 = "radacct"
+    postauth_table = "radpostauth"
+    authcheck_table = "radcheck"
+    groupcheck_table = "radgroupcheck"
+    authreply_table = "radreply"
+    groupreply_table = "radgroupreply"
+    usergroup_table = "radusergroup"
+}
+

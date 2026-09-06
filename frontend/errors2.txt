@@ -1,0 +1,5 @@
+src/mock.ts(11,11): error TS6133: 'generateTimeSeries' is declared but its value is never read.
+src/pages/GlobalDashboard.tsx(4,10): error TS6133: 'LineChart' is declared but its value is never read.
+src/pages/GlobalDashboard.tsx(4,21): error TS6133: 'Line' is declared but its value is never read.
+src/pages/ShipDashboard.tsx(21,43): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'SetStateAction<string>'.
+  Type 'undefined' is not assignable to type 'SetStateAction<string>'.

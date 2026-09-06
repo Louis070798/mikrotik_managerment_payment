@@ -1,0 +1,1 @@
+ALTER TABLE "service_endpoints" ADD COLUMN "check_config" jsonb DEFAULT '{}'::jsonb NOT NULL;

@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+
+# Environment files -- chua secret that (DB password, RADIUS secret, ZeroTier token...).
+# Chi commit ban .example lam template, khong bao gio commit ban that.
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Log / process output cua may local (khong phai artifact du an)
+*.log
+_dev_run_backend.log
+_dev_run_frontend.log
+
+# File tam / scratch khong thuoc source that
+_to_delete/
+_sync-temp.tar.gz
+*.tar.gz
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Coverage / test artifacts
+coverage/

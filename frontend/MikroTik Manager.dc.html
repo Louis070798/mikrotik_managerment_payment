@@ -1,0 +1,2300 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#eef0f2;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#0f8175;text-decoration:none}
+  a:hover{color:#0b5f56;text-decoration:underline}
+  ::-webkit-scrollbar{width:9px;height:9px}
+  ::-webkit-scrollbar-thumb{background:#c4cacf;border-radius:9px}
+  ::-webkit-scrollbar-track{background:transparent}
+  @keyframes rbBlip{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;min-height:720px;width:100%;overflow:hidden;font-family:'IBM Plex Sans',system-ui,sans-serif;color:#16191c;font-size:13px">
+
+  <aside style="width:214px;flex:none;background:#1b1f23;display:flex;flex-direction:column;overflow:hidden">
+    <div style="padding:15px 14px;display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(255,255,255,.08)">
+      <div style="width:26px;height:26px;flex:none;border-radius:6px;background:#12a594;display:flex;align-items:center;justify-content:center;font:600 11px 'IBM Plex Mono',monospace;color:#04211e">RB</div>
+      <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+        <div style="font:600 12.5px/1.15 'IBM Plex Sans',sans-serif;color:#eef1f3">RouterBridge</div>
+        <div style="font:400 9px/1.15 'IBM Plex Mono',monospace;color:rgba(255,255,255,.38);letter-spacing:.06em">NOC CONSOLE</div>
+      </div>
+    </div>
+
+    <nav style="display:flex;flex-direction:column;gap:1px;padding:10px 8px;overflow-y:auto">
+      <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.13em;color:rgba(255,255,255,.28);padding:6px 8px 7px">VẬN HÀNH</div>
+      <sc-for list="{{ navOps }}" as="it" hint-placeholder-count="2">
+        <button onClick="{{ it.go }}" style="display:flex;align-items:center;gap:9px;padding:7px 9px;border:0;border-radius:6px;cursor:pointer;text-align:left;width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:500;background:{{ it.bg }};color:{{ it.fg }}" style-hover="background:rgba(255,255,255,.08)">
+          <span style="width:13px;height:13px;flex:none;border-radius:3px;border:1.5px solid currentColor;opacity:.65"></span>{{ it.label }}
+          <sc-if value="{{ it.badge }}"><span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;padding:1px 5px;border-radius:4px;background:rgba(209,55,59,.2);color:#ff8b8f">{{ it.badge }}</span></sc-if>
+        </button>
+      </sc-for>
+      <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.13em;color:rgba(255,255,255,.28);padding:14px 8px 7px">KHÁCH HÀNG</div>
+      <sc-for list="{{ navCust }}" as="it" hint-placeholder-count="1">
+        <button onClick="{{ it.go }}" style="display:flex;align-items:center;gap:9px;padding:7px 9px;border:0;border-radius:6px;cursor:pointer;text-align:left;width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:500;background:{{ it.bg }};color:{{ it.fg }}" style-hover="background:rgba(255,255,255,.08)">
+          <span style="width:13px;height:13px;flex:none;border-radius:3px;border:1.5px solid currentColor;opacity:.65"></span>{{ it.label }}
+        </button>
+      </sc-for>
+      <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.13em;color:rgba(255,255,255,.28);padding:14px 8px 7px">GÓI & HẠ TẦNG</div>
+      <sc-for list="{{ navSub }}" as="it" hint-placeholder-count="3">
+        <button onClick="{{ it.go }}" style="display:flex;align-items:center;gap:9px;padding:7px 9px;border:0;border-radius:6px;cursor:pointer;text-align:left;width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:500;background:{{ it.bg }};color:{{ it.fg }}" style-hover="background:rgba(255,255,255,.08)">
+          <span style="width:13px;height:13px;flex:none;border-radius:3px;border:1.5px solid currentColor;opacity:.65"></span>{{ it.label }}
+        </button>
+      </sc-for>
+      <div style="font:600 9px/1 'IBM Plex Mono',monospace;letter-spacing:.13em;color:rgba(255,255,255,.28);padding:14px 8px 7px">TỔ CHỨC</div>
+      <sc-for list="{{ navOrg }}" as="it" hint-placeholder-count="1">
+        <button onClick="{{ it.go }}" style="display:flex;align-items:center;gap:9px;padding:7px 9px;border:0;border-radius:6px;cursor:pointer;text-align:left;width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;font-weight:500;background:{{ it.bg }};color:{{ it.fg }}" style-hover="background:rgba(255,255,255,.08)">
+          <span style="width:13px;height:13px;flex:none;border-radius:3px;border:1.5px solid currentColor;opacity:.65"></span>{{ it.label }}
+        </button>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top:auto;padding:11px;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:10px">
+      <div style="background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:7px;padding:9px 10px;display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font:400 9px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:rgba(255,255,255,.4)">ROUTEROS API</span>
+          <span style="width:5px;height:5px;border-radius:50%;background:#12a594;animation:rbBlip 2.2s ease-in-out infinite"></span>
+        </div>
+        <div style="font:500 11px 'IBM Plex Sans',sans-serif;color:rgba(255,255,255,.68)">{{ pollerLabel }}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="width:24px;height:24px;flex:none;border-radius:50%;background:#39424b;font:600 9.5px 'IBM Plex Mono',monospace;color:#dde2e7;display:flex;align-items:center;justify-content:center">TN</div>
+        <div style="display:flex;flex-direction:column;min-width:0">
+          <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;color:#e4e9ed">Trần Nam</span>
+          <span style="font:400 9.5px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.36)">superadmin</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <header style="flex:none;height:52px;background:#fff;border-bottom:1px solid #dfe3e6;display:flex;align-items:center;gap:14px;padding:0 20px">
+      <div style="display:flex;flex-direction:column;gap:1px;flex:none;min-width:0">
+        <span style="font:400 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#7c858d;white-space:nowrap">{{ crumb }}</span>
+        <span style="font:600 15px/1.15 'IBM Plex Sans',sans-serif;color:#16191c;white-space:nowrap">{{ title }}</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;justify-content:flex-end">
+        <div style="position:relative;flex:none">
+          <button onClick="{{ toggleScope }}" style="display:flex;align-items:center;gap:8px;height:29px;padding:0 10px;border:1px solid {{ scopeBorder }};border-radius:6px;background:{{ scopeBg }};cursor:pointer;max-width:220px;flex:0 1 auto;min-width:0" style-hover="border-color:#12a594">
+            <span style="width:5px;height:14px;flex:none;border-radius:2px;background:#12a594"></span>
+            <span style="display:flex;flex-direction:column;align-items:flex-start;gap:0;min-width:0">
+              <span style="font:400 8.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">{{ scopeKind }}</span>
+              <span style="font:600 11.5px 'IBM Plex Sans',sans-serif;color:#16191c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px">{{ scopeName }}</span>
+            </span>
+            <span style="font:400 9px 'IBM Plex Mono',monospace;color:#8e99a3">▼</span>
+          </button>
+          <sc-if value="{{ scopeOpen }}">
+            <div style="position:absolute;top:34px;right:0;z-index:40;width:302px;background:#fff;border:1px solid #dfe3e6;border-radius:8px;box-shadow:0 12px 28px rgba(16,22,26,.16);padding:6px;display:flex;flex-direction:column;gap:1px;max-height:340px;overflow-y:auto">
+              <span style="font:600 9px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#7c858d;padding:6px 8px 5px">PHẠM VI QUẢN LÝ</span>
+              <sc-for list="{{ scopeList }}" as="t" hint-placeholder-count="10">
+                <button onClick="{{ t.pickScope }}" style="display:flex;align-items:center;gap:8px;border:0;border-radius:5px;cursor:pointer;text-align:left;width:100%;background:{{ t.scopeBg }};padding:6px 8px 6px {{ t.indent }}" style-hover="background:#f2faf9">
+                  <span style="font:500 10px 'IBM Plex Mono',monospace;padding:1px 5px;border-radius:3px;background:{{ t.kindBg }};color:{{ t.kindFg }};flex:none">{{ t.kindShort }}</span>
+                  <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;color:#16191c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
+                  <span style="margin-left:auto;font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3;flex:none">{{ t.userCount }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;height:29px;padding:0 10px;border:1px solid #dfe3e6;border-radius:6px;background:#fafbfc;flex:1 1 auto;min-width:64px">
+          <span style="width:11px;height:11px;flex:none;border-radius:50%;border:1.5px solid #9aa2a9"></span>
+          <input placeholder="Tìm user, IP, MAC…" style="border:0;outline:0;background:transparent;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;width:100%">
+        </div>
+        <button style="height:29px;padding:0 11px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:#3d454c;white-space:nowrap;flex:none" style-hover="background:#f4f5f6">Đồng bộ</button>
+        <button onClick="{{ goAssign }}" style="height:29px;padding:0 12px;border:1px solid #0f8175;border-radius:6px;background:#12a594;cursor:pointer;font:600 12px 'IBM Plex Sans',sans-serif;color:#04211e;white-space:nowrap;flex:none" style-hover="background:#0f8175;color:#fff">+ Gán gói</button>
+      </div>
+    </header>
+
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 20px 28px">
+
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:grid;column-gap:14px;grid-template-columns:repeat(5,1fr);gap:10px">
+          <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">{{ k.label }}</span>
+              <span style="font:600 22px/1 'IBM Plex Mono',monospace;color:#16191c;letter-spacing:-.01em">{{ k.value }}</span>
+              <span style="font:500 10.5px 'IBM Plex Sans',sans-serif;color:{{ k.deltaColor }}">{{ k.delta }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ showChart }}" hint-placeholder-val="{{ true }}">
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Lượng data theo từng thiết bị</span>
+            <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#7c858d">24H · TỔNG {{ deviceDataTotal }}</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:10px;height:180px">
+            <sc-for list="{{ deviceData }}" as="d" hint-placeholder-count="8">
+              <div onClick="{{ d.open }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;cursor:pointer;height:100%;justify-content:flex-end">
+                <span style="font:500 10.5px 'IBM Plex Mono',monospace;color:#16191c;white-space:nowrap">{{ d.data }}</span>
+                <span style="width:60%;border-radius:4px 4px 0 0;background:{{ d.tone }};height:{{ d.barH }}"></span>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:0;max-width:100%">
+                  <span style="font:500 11px 'IBM Plex Sans',sans-serif;color:#16191c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ d.name }}</span>
+                  <span style="font:400 9.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ d.site }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:1.55fr 1fr;gap:12px;align-items:start">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+            <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Thiết bị tải cao nhất</span>
+              <a href="#" onClick="{{ goRouters }}" style="margin-left:auto;font:500 11px 'IBM Plex Sans',sans-serif">{{ routerAllLabel }}</a>
+            </div>
+            <div style="display:grid;column-gap:14px;min-width:500px;grid-template-columns:1.5fr 1fr .8fr .8fr .9fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+              <span>THIẾT BỊ</span><span>SITE</span><span style="text-align:right">CPU</span><span style="text-align:right">ONLINE</span><span style="text-align:right">THROUGHPUT</span>
+            </div>
+            <sc-for list="{{ topRouters }}" as="r" hint-placeholder-count="5">
+              <div onClick="{{ r.open }}" style="display:grid;column-gap:14px;min-width:500px;grid-template-columns:1.5fr 1fr .8fr .8fr .9fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center;cursor:pointer" style-hover="background:#fafbfc">
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                  <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ r.name }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ r.ip }}</span>
+                </div>
+                <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c">{{ r.site }}</span>
+                <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:{{ r.cpuColor }}">{{ r.cpu }}%</span>
+                <span style="text-align:right;font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.online }}</span>
+                <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ r.tput }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+            <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Cảnh báo</span>
+              <span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;padding:2px 6px;border-radius:4px;background:#fdecec;color:#c0292d;white-space:nowrap">{{ alertCount }} MỚI</span>
+            </div>
+            <sc-for list="{{ alerts }}" as="a" hint-placeholder-count="5">
+              <div style="display:flex;gap:9px;padding:9px 13px;border-bottom:1px solid #f2f4f5;align-items:flex-start" style-hover="background:#fafbfc">
+                <span style="width:6px;height:6px;flex:none;border-radius:50%;margin-top:4px;background:{{ a.color }}"></span>
+                <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                  <span style="font:500 11.5px/1.35 'IBM Plex Sans',sans-serif;color:#16191c">{{ a.text }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ a.meta }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isRouters }}">
+      <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;display:flex;flex-direction:column;height:calc(100vh - 148px)">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 13px;border-bottom:1px solid #eaedef;flex:none">
+          <sc-for list="{{ routerFilters }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.go }}" style="height:26px;padding:0 10px;border:1px solid {{ f.border }};border-radius:5px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:500">{{ f.label }}</button>
+          </sc-for>
+          <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ routerCount }} thiết bị · cập nhật 12s trước</span>
+          <button onClick="{{ openAddRouter }}" style="height:26px;padding:0 10px;border:1px solid #0f8175;border-radius:5px;background:#12a594;cursor:pointer;font:600 11px 'IBM Plex Sans',sans-serif;color:#04211e;white-space:nowrap;flex:none" style-hover="background:#0f8175;color:#fff">+ Thêm thiết bị</button>
+        </div>
+        <div style="flex:1;min-height:0;overflow:auto">
+        <div style="display:grid;column-gap:14px;min-width:1120px;grid-template-columns:1.5fr .95fr .85fr .75fr .65fr .65fr .75fr .85fr 90px;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d;position:sticky;top:0">
+          <span>THIẾT BỊ / IP</span><span>MODEL</span><span>ROUTEROS</span><span>UPTIME</span><span style="text-align:right">CPU</span><span style="text-align:right">RAM</span><span style="text-align:right">USER ON</span><span>TRẠNG THÁI</span><span>THAO TÁC</span>
+        </div>
+          <sc-for list="{{ routers }}" as="r" hint-placeholder-count="8">
+          <div style="display:grid;column-gap:14px;min-width:1180px;grid-template-columns:1.5fr .95fr .85fr .75fr .65fr .65fr .75fr .85fr 90px;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+            <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+              <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ r.name }}</span>
+              <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ r.ip }} · {{ r.site }}</span>
+            </div>
+            <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.model }}</span>
+            <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.ros }}</span>
+            <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.uptime }}</span>
+            <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:{{ r.cpuColor }}">{{ r.cpu }}%</span>
+            <span style="text-align:right;font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.ram }}%</span>
+            <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ r.online }}</span>
+            <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:{{ r.stBg }};color:{{ r.stFg }}">{{ r.status }}</span>
+            <div style="display:flex;gap:6px">
+              <button onClick="{{ r.open }}" style="height:23px;padding:0 8px;border:1px solid #dfe3e6;border-radius:5px;background:#fff;cursor:pointer;font:600 10px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Xem</button>
+              <button onClick="{{ r.stop }}" style="height:23px;padding:0 8px;border:1px solid #f4c7c8;border-radius:5px;background:#fff;cursor:pointer;font:600 10px 'IBM Plex Sans',sans-serif;color:{{ r.stopFg }}" style-hover="background:#fdecec">{{ r.stopLabel }}</button>
+            </div>
+          </div>
+        </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;padding:8px 13px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;flex:none;border-top:1px solid #eaedef">
+          <span>HIỂN THỊ {{ routerPageStart }}–{{ routerPageEnd }} / {{ routerCount }}</span>
+          <span style="margin-left:auto;display:flex;gap:6px;align-items:center">
+            <span onClick="{{ routerPagePrev }}" style="padding:2px 7px;border:1px solid #eaedef;border-radius:4px;cursor:pointer;color:{{ routerPagePrevColor }}">←</span>
+            <sc-for list="{{ routerPageNums }}" as="pn" hint-placeholder-count="2">
+              <span onClick="{{ pn.go }}" style="padding:2px 7px;border:1px solid {{ pn.border }};border-radius:4px;cursor:pointer;background:{{ pn.bg }};color:{{ pn.fg }}">{{ pn.n }}</span>
+            </sc-for>
+            <span onClick="{{ routerPageNext }}" style="padding:2px 7px;border:1px solid #eaedef;border-radius:4px;cursor:pointer;color:{{ routerPageNextColor }}">→</span>
+          </span>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isRouterDetail }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <a href="#" onClick="{{ goRouters }}" style="font:500 11.5px 'IBM Plex Sans',sans-serif">← Danh sách thiết bị</a>
+          <div style="display:flex;flex-direction:column;gap:1px;margin-left:6px">
+            <span style="font:600 14px 'IBM Plex Sans',sans-serif">{{ dName }}</span>
+            <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ dIp }} · {{ dSite }} · {{ dModel }} · RouterOS {{ dRos }}</span>
+          </div>
+          <span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:3px 8px;border-radius:4px;background:{{ dStBg }};color:{{ dStFg }};white-space:nowrap">{{ dStatus }}</span>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">UPTIME</span>
+            <span style="font:600 20px/1 'IBM Plex Mono',monospace;color:#16191c">{{ dUptime }}</span>
+          </div>
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">CPU</span>
+            <span style="font:600 20px/1 'IBM Plex Mono',monospace;color:{{ dCpuColor }}">{{ dCpu }}%</span>
+          </div>
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">RAM</span>
+            <span style="font:600 20px/1 'IBM Plex Mono',monospace;color:#16191c">{{ dRam }}%</span>
+          </div>
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">USER ONLINE</span>
+            <span style="font:600 20px/1 'IBM Plex Mono',monospace;color:#16191c">{{ dOnline }}</span>
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">WAN — kết nối ra Internet</span>
+          </div>
+          <div style="display:grid;column-gap:14px;min-width:820px;grid-template-columns:1.4fr 1.2fr .8fr .8fr .9fr 1.4fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>INTERFACE</span><span>IP CÔNG KHAI</span><span style="text-align:right">RX (Mbps)</span><span style="text-align:right">TX (Mbps)</span><span>TRẠNG THÁI</span><span>60 PHÚT GẦN NHẤT</span>
+          </div>
+          <sc-for list="{{ wanIfaces }}" as="w" hint-placeholder-count="2">
+            <div style="display:grid;column-gap:14px;min-width:820px;grid-template-columns:1.4fr 1.2fr .8fr .8fr .9fr 1.4fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+              <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ w.name }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ w.ip }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ w.rx }}</span>
+              <span style="text-align:right;font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ w.tx }}</span>
+              <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:{{ w.stBg }};color:{{ w.stFg }};white-space:nowrap">{{ w.status }}</span>
+              <svg viewBox="0 0 1000 40" preserveAspectRatio="none" style="width:100%;height:26px;display:block">
+                <polyline points="{{ w.line }}" fill="none" stroke="#12a594" stroke-width="2"></polyline>
+              </svg>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Ethernet — cổng LAN / thiết bị nội bộ</span>
+          </div>
+          <div style="display:grid;column-gap:14px;min-width:760px;grid-template-columns:1.4fr 1.2fr .8fr .8fr .9fr 1.3fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>INTERFACE</span><span>IP</span><span style="text-align:right">RX (Mbps)</span><span style="text-align:right">TX (Mbps)</span><span>TRẠNG THÁI</span><span>TẢI</span>
+          </div>
+          <sc-for list="{{ etherIfaces }}" as="e" hint-placeholder-count="4">
+            <div style="display:grid;column-gap:14px;min-width:760px;grid-template-columns:1.4fr 1.2fr .8fr .8fr .9fr 1.3fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+              <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ e.name }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ e.ip }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ e.rx }}</span>
+              <span style="text-align:right;font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ e.tx }}</span>
+              <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:{{ e.stBg }};color:{{ e.stFg }};white-space:nowrap">{{ e.status }}</span>
+              <span style="height:5px;border-radius:3px;background:#eef0f2;overflow:hidden;display:block">
+                <span style="display:block;height:5px;border-radius:3px;width:{{ e.pct }};background:#12a594"></span>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:1.4fr 1fr;gap:12px;align-items:start">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Lượng data sử dụng</span>
+              <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">24H · TỔNG {{ dayTotal }}</span>
+            </div>
+            <svg viewBox="0 0 1000 60" preserveAspectRatio="none" style="width:100%;height:96px;display:block">
+              <polygon points="{{ dataArea }}" fill="rgba(18,165,148,.13)"></polygon>
+              <polyline points="{{ dataLine }}" fill="none" stroke="#12a594" stroke-width="1.8"></polyline>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font:400 9.5px 'IBM Plex Mono',monospace;color:#9aa2a9">
+              <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>NOW</span>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+            <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Thuê bao dùng nhiều nhất</span>
+              <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ dataUserCount }} USER</span>
+            </div>
+            <sc-for list="{{ dataUsers }}" as="u" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;gap:3px;padding:8px 13px;border-bottom:1px solid #f2f4f5">
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ u.name }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ u.pkg }}</span>
+                  <span style="margin-left:auto;font:500 11px 'IBM Plex Mono',monospace;color:#16191c">{{ u.used }}</span>
+                </div>
+                <span style="height:4px;border-radius:2px;background:#eef0f2;overflow:hidden;display:block">
+                  <span style="display:block;height:4px;border-radius:2px;width:{{ u.pct }};background:{{ u.tone }}"></span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isUsers }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:18px;border-bottom:1px solid #e3e7ea">
+          <sc-for list="{{ userTabs }}" as="tb" hint-placeholder-count="3">
+            <button onClick="{{ tb.go }}" style="border:0;background:none;cursor:pointer;padding:0 0 9px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;color:{{ tb.fg }};border-bottom:2px solid {{ tb.bd }}">{{ tb.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <sc-for list="{{ userFilters }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.go }}" style="height:28px;padding:0 11px;border:1px solid {{ f.border }};border-radius:6px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;white-space:nowrap;flex:none">{{ f.label }}</button>
+          </sc-for>
+          <span style="margin-left:auto;font:400 11px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ selCount }} đã chọn</span>
+          <button onClick="{{ goAssign }}" style="height:28px;padding:0 11px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:{{ bulkFg }};white-space:nowrap;flex:none" style-hover="background:#f4f5f6">Đổi gói cho mục đã chọn</button>
+          <button onClick="{{ openAddUser }}" style="height:28px;padding:0 11px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap;flex:none" style-hover="background:#f4f5f6">+ Thêm user</button>
+          <button onClick="{{ openImport }}" style="height:28px;padding:0 11px;border:1px solid #0f8175;border-radius:6px;background:#12a594;cursor:pointer;font:600 12px 'IBM Plex Sans',sans-serif;color:#04211e;white-space:nowrap;flex:none" style-hover="background:#0f8175;color:#fff">⇪ Nhập Excel hàng loạt</button>
+        </div>
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;display:flex;flex-direction:column;height:calc(100vh - 240px)">
+          <div style="flex:1;min-height:0;overflow:auto">
+          <div style="display:grid;column-gap:14px;min-width:1320px;grid-template-columns:26px 1.35fr .8fr 1fr 1.05fr .95fr .85fr .85fr 1.6fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d;align-items:center;position:sticky;top:0">
+            <span></span><span>USERNAME</span><span>LOẠI</span><span>THIẾT BỊ</span><span>GÓI CƯỚC</span><span>DATA DÙNG</span><span>HẾT HẠN</span><span>TRẠNG THÁI</span><span>THAO TÁC</span>
+          </div>
+          <sc-for list="{{ users }}" as="u" hint-placeholder-count="12">
+            <div style="display:grid;column-gap:14px;min-width:1320px;grid-template-columns:26px 1.35fr .8fr 1fr 1.05fr .95fr .85fr .85fr 1.6fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center;background:{{ u.rowBg }}" style-hover="background:#f7f9f9">
+              <span onClick="{{ u.toggle }}" style="cursor:pointer;width:13px;height:13px;border-radius:3px;border:1.5px solid {{ u.boxBorder }};background:{{ u.boxBg }};display:flex;align-items:center;justify-content:center;font:700 9px 'IBM Plex Mono',monospace;color:#fff">{{ u.tick }}</span>
+              <div onClick="{{ u.open }}" style="display:flex;flex-direction:column;gap:1px;min-width:0;cursor:pointer">
+                <span style="font:500 12px 'IBM Plex Sans',sans-serif">{{ u.name }}</span>
+                <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ u.mac }}</span>
+              </div>
+              <span style="font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;justify-self:start;padding:2px 6px;border-radius:4px;background:{{ u.typeBg }};color:{{ u.typeFg }}">{{ u.type }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap">{{ u.router }}</span>
+              <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;color:#16191c">{{ u.pkg }}</span>
+              <div style="display:flex;flex-direction:column;gap:3px;padding-right:14px">
+                <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ u.quota }}</span>
+                <span style="height:3px;border-radius:2px;background:#eaedef;overflow:hidden;display:block">
+                  <span style="display:block;height:3px;border-radius:2px;width:{{ u.quotaPct }};background:{{ u.quotaColor }}"></span>
+                </span>
+              </div>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:{{ u.expColor }}">{{ u.expiry }}</span>
+              <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:{{ u.stBg }};color:{{ u.stFg }}">{{ u.status }}</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button onClick="{{ u.open }}" style="height:24px;padding:0 9px;border:1px solid #2f6fed;border-radius:5px;background:#2f6fed;cursor:pointer;font:600 10.5px 'IBM Plex Sans',sans-serif;color:#fff" style-hover="background:#1f52bd">Chi tiết</button>
+                <button onClick="{{ u.recharge }}" style="height:24px;padding:0 9px;border:1px solid #0f8175;border-radius:5px;background:#12a594;cursor:pointer;font:600 10.5px 'IBM Plex Sans',sans-serif;color:#04211e" style-hover="background:#0f8175;color:#fff">Gia hạn</button>
+                <button onClick="{{ u.topup }}" style="height:24px;padding:0 9px;border:1px solid #dfe3e6;border-radius:5px;background:#fff;cursor:pointer;font:600 10.5px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Nạp data</button>
+                <button onClick="{{ u.disable }}" style="height:24px;padding:0 9px;border:1px solid #f4c7c8;border-radius:5px;background:#fff;cursor:pointer;font:600 10.5px 'IBM Plex Sans',sans-serif;color:{{ u.disableFg }}" style-hover="background:#fdecec">{{ u.disableLabel }}</button>
+              </div>
+            </div>
+          </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;padding:8px 13px;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;flex:none;border-top:1px solid #eaedef">
+            <span>HIỂN THỊ {{ userPageStart }}–{{ userPageEnd }} / {{ userCount }}</span>
+            <span style="margin-left:auto;display:flex;gap:6px;align-items:center">
+              <span onClick="{{ userPagePrev }}" style="padding:2px 7px;border:1px solid #eaedef;border-radius:4px;cursor:pointer;color:{{ userPagePrevColor }}">←</span>
+              <sc-for list="{{ userPageNums }}" as="pn" hint-placeholder-count="3">
+                <span onClick="{{ pn.go }}" style="padding:2px 7px;border:1px solid {{ pn.border }};border-radius:4px;cursor:pointer;background:{{ pn.bg }};color:{{ pn.fg }}">{{ pn.n }}</span>
+              </sc-for>
+              <span onClick="{{ userPageNext }}" style="padding:2px 7px;border:1px solid #eaedef;border-radius:4px;cursor:pointer;color:{{ userPageNextColor }}">→</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isUserDetail }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <a href="#" onClick="{{ goUsers }}" style="font:500 11.5px 'IBM Plex Sans',sans-serif">← Danh sách người dùng</a>
+          <div style="display:flex;flex-direction:column;gap:1px;margin-left:6px">
+            <span style="font:600 14px 'IBM Plex Sans',sans-serif">{{ uName }}</span>
+            <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ uMac }} · {{ uRouter }} · {{ uType }}</span>
+          </div>
+          <span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:3px 8px;border-radius:4px;background:{{ uStBg }};color:{{ uStFg }};white-space:nowrap">{{ uStatus }}</span>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:1fr 2fr 1fr 1fr;gap:10px">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">GÓI CƯỚC</span>
+            <span style="font:600 16px/1.2 'IBM Plex Sans',sans-serif;color:#16191c">{{ uPkg }}</span>
+            <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ uRate }}</span>
+          </div>
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:7px;grid-column:span 2">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">DATA ĐÃ DÙNG</span>
+              <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ uQuotaCap }}</span>
+            </div>
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span style="font:600 22px/1 'IBM Plex Mono',monospace;color:#16191c">{{ uQuotaUsed }}</span>
+              <span style="font:500 11px 'IBM Plex Mono',monospace;color:{{ uQuotaColor }}">{{ uQuotaPct }}</span>
+            </div>
+            <span style="height:7px;border-radius:4px;background:#eaedef;overflow:hidden;display:block">
+              <span style="display:block;height:7px;border-radius:4px;width:{{ uQuotaPct }};background:{{ uQuotaColor }}"></span>
+            </span>
+            <span style="font:400 10.5px 'IBM Plex Sans',sans-serif;color:#8e99a3">{{ uQuotaNote }}</span>
+            <sc-if value="{{ uCanTopup }}">
+            <div style="display:flex;align-items:center;gap:7px;margin-top:2px;flex-wrap:wrap">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d;margin-right:2px">MUA THÊM:</span>
+              <sc-for list="{{ uTopups }}" as="t" hint-placeholder-count="3">
+                <button onClick="{{ t.buy }}" style="height:26px;padding:0 10px;border:1px solid {{ t.border }};border-radius:6px;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:600" style-hover="border-color:#12a594">{{ t.label }}</button>
+              </sc-for>
+              <sc-if value="{{ uTopupMsg }}"><span style="font:500 11px 'IBM Plex Mono',monospace;color:#0f8175">✓ {{ uTopupMsg }}</span></sc-if>
+            </div>
+            </sc-if>
+          </div>
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">HẾT HẠN</span>
+            <span style="font:600 20px/1 'IBM Plex Mono',monospace;color:{{ uExpColor }}">{{ uExpiry }}</span>
+          </div>
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">GIÁ GÓI</span>
+            <span style="font:600 20px/1 'IBM Plex Mono',monospace;color:#16191c">{{ uPrice }}</span>
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:baseline;gap:10px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Lượng data sử dụng theo ngày</span>
+            <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">14 NGÀY GẦN NHẤT</span>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:6px;height:130px">
+            <sc-for list="{{ uDaily }}" as="d" hint-placeholder-count="14">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;height:100%;justify-content:flex-end">
+                <span style="width:70%;border-radius:2px 2px 0 0;background:#12a594;height:{{ d.h }}"></span>
+                <span style="font:400 9px 'IBM Plex Mono',monospace;color:#9aa2a9">{{ d.d }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Top trang web truy cập</span>
+              <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">7 NGÀY · DNS LOG</span>
+            </div>
+            <sc-for list="{{ uSites }}" as="w" hint-placeholder-count="8">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;color:#16191c;white-space:nowrap">{{ w.domain }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ w.cat }}</span>
+                  <span style="margin-left:auto;font:500 11px 'IBM Plex Mono',monospace;color:#4b545c">{{ w.data }}</span>
+                </div>
+                <span style="height:5px;border-radius:3px;background:#eef0f2;overflow:hidden;display:block">
+                  <span style="display:block;height:5px;border-radius:3px;width:{{ w.pct }};background:{{ w.tone }}"></span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Phân loại lưu lượng theo nội dung</span>
+              <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ uSitesTotal }}</span>
+            </div>
+            <sc-for list="{{ uCats }}" as="c" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="width:9px;height:9px;flex:none;border-radius:2px;background:{{ c.tone }}"></span>
+                <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#3d454c;white-space:nowrap">{{ c.name }}</span>
+                <span style="flex:1;height:6px;border-radius:3px;background:#eef0f2;overflow:hidden;display:block">
+                  <span style="display:block;height:6px;border-radius:3px;width:{{ c.pct }};background:{{ c.tone }}"></span>
+                </span>
+                <span style="font:500 10.5px 'IBM Plex Mono',monospace;color:#4b545c;width:36px;text-align:right">{{ c.pct }}</span>
+              </div>
+            </sc-for>
+            <div style="margin-top:auto;padding-top:6px;border-top:1px solid #eaedef;font:400 10.5px/1.5 'IBM Plex Mono',monospace;color:#8e99a3">Dữ liệu suy từ SNI/DNS qua NAS — không giải mã nội dung HTTPS.</div>
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Lịch sử phiên RADIUS</span>
+          </div>
+          <div style="display:grid;column-gap:14px;min-width:640px;grid-template-columns:1fr .8fr .8fr 1.1fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>BẮT ĐẦU</span><span>THỜI LƯỢNG</span><span style="text-align:right">DATA</span><span>NAS</span>
+          </div>
+          <sc-for list="{{ uSessions }}" as="ss" hint-placeholder-count="5">
+            <div style="display:grid;column-gap:14px;min-width:640px;grid-template-columns:1fr .8fr .8fr 1.1fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center">
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ ss.t }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ ss.dur }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ ss.data }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap">{{ ss.nas }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Lịch sử thanh toán</span>
+            <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ uPayCount }} GIAO DỊCH</span>
+          </div>
+          <div style="display:grid;column-gap:14px;min-width:680px;grid-template-columns:1fr 1.3fr .9fr .9fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>THỜI GIAN</span><span>NỘI DUNG</span><span style="text-align:right">SỐ TIỀN</span><span>TRẠNG THÁI</span>
+          </div>
+          <sc-for list="{{ uPayments }}" as="p" hint-placeholder-count="5">
+            <div style="display:grid;column-gap:14px;min-width:680px;grid-template-columns:1fr 1.3fr .9fr .9fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center">
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ p.t }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#3d454c">{{ p.desc }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ p.amount }}</span>
+              <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:{{ p.stBg }};color:{{ p.stFg }};white-space:nowrap">{{ p.status }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isAddUserOpen }}">
+      <div style="position:fixed;inset:0;background:rgba(15,20,23,.45);display:flex;align-items:center;justify-content:center;z-index:80">
+        <div style="width:420px;background:#fff;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:11px;box-shadow:0 20px 48px rgba(16,22,26,.28)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font:600 14px 'IBM Plex Sans',sans-serif">Thêm người dùng</span>
+            <span onClick="{{ closeAddUser }}" style="margin-left:auto;cursor:pointer;font:600 14px 'IBM Plex Sans',sans-serif;color:#8e99a3">✕</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">USERNAME</span>
+              <input placeholder="VD: nguyenvanb" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">MẬT KHẨU</span>
+              <input type="password" placeholder="••••••••" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">LOẠI USER</span>
+            <div style="display:flex;gap:5px">
+              <sc-for list="{{ addUserTypeOpts }}" as="t" hint-placeholder-count="2">
+                <button onClick="{{ t.go }}" style="flex:1;height:28px;border:1px solid {{ t.border }};border-radius:6px;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:11.5px;font-weight:500">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">MIKROTIK (NAS)</span>
+              <select style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+                <sc-for list="{{ addUserRouters }}" as="r" hint-placeholder-count="6"><option>{{ r.name }}</option></sc-for>
+              </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">GÓI CƯỚC</span>
+              <select style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+                <sc-for list="{{ addUserPackages }}" as="p" hint-placeholder-count="6"><option>{{ p.name }}</option></sc-for>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button onClick="{{ submitAddUser }}" style="flex:1;height:32px;border:1px solid #0f8175;border-radius:6px;background:#12a594;cursor:pointer;font:600 12.5px 'IBM Plex Sans',sans-serif;color:#04211e" style-hover="background:#0f8175;color:#fff">Tạo user</button>
+            <button onClick="{{ closeAddUser }}" style="height:32px;padding:0 12px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Huỷ</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isAddRouterOpen }}">
+      <div style="position:fixed;inset:0;background:rgba(15,20,23,.45);display:flex;align-items:center;justify-content:center;z-index:80">
+        <div style="width:420px;background:#fff;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:11px;box-shadow:0 20px 48px rgba(16,22,26,.28)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font:600 14px 'IBM Plex Sans',sans-serif">Thêm thiết bị MikroTik</span>
+            <span onClick="{{ closeAddRouter }}" style="margin-left:auto;cursor:pointer;font:600 14px 'IBM Plex Sans',sans-serif;color:#8e99a3">✕</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">TÊN THIẾT BỊ</span>
+              <input placeholder="VD: HN-CORE-03" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">ĐỊA CHỈ IP</span>
+              <input placeholder="10.10.0.3" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:500 12px 'IBM Plex Mono',monospace;color:#16191c;background:#fff;outline:0">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">MODEL</span>
+              <input placeholder="VD: RB5009UG" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">SITE / KHU VỰC</span>
+              <input placeholder="VD: Hà Nội · Cầu Giấy" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">API USERNAME</span>
+              <input placeholder="admin" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">API PASSWORD</span>
+              <input type="password" placeholder="••••••••" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">GÁN VÀO TENANT</span>
+            <input value="{{ tenantSearch }}" onChange="{{ setTenantSearch }}" placeholder="Tìm tenant…" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+            <div style="display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;border:1px solid #eaedef;border-radius:6px;padding:5px">
+              <sc-for list="{{ addRouterTenants }}" as="t" hint-placeholder-count="6">
+                <div onClick="{{ t.pick }}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:5px;cursor:pointer;background:{{ t.picked ? '#f2faf9' : 'transparent' }}" style-hover="background:#f7f9f9">
+                  <span style="width:11px;height:11px;flex:none;border-radius:50%;border:1.5px solid {{ t.picked ? '#0f8175' : '#c4cacf' }};background:{{ t.picked ? '#12a594' : '#fff' }};box-shadow:{{ t.picked ? 'inset 0 0 0 2px #fff' : 'none' }}"></span>
+                  <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;color:#16191c;white-space:pre">{{ t.name }}</span>
+                </div>
+              </sc-for>
+              <sc-if value="{{ addRouterTenantsEmpty }}"><span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#8e99a3;padding:6px 8px">Không tìm thấy tenant</span></sc-if>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:4px">
+            <button onClick="{{ submitAddRouter }}" style="flex:1;height:32px;border:1px solid #0f8175;border-radius:6px;background:#12a594;cursor:pointer;font:600 12.5px 'IBM Plex Sans',sans-serif;color:#04211e" style-hover="background:#0f8175;color:#fff">Lưu & kết nối</button>
+            <button onClick="{{ closeAddRouter }}" style="height:32px;padding:0 12px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Huỷ</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isTopupOpen }}">
+      <div style="position:fixed;inset:0;background:rgba(15,20,23,.45);display:flex;align-items:center;justify-content:center;z-index:80">
+        <div style="width:380px;background:#fff;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 48px rgba(16,22,26,.28)">
+          <span style="font:600 14px 'IBM Plex Sans',sans-serif">Xác nhận thanh toán</span>
+          <div style="background:#fafbfc;border:1px solid #eaedef;border-radius:6px;padding:11px 12px;display:flex;flex-direction:column;gap:7px">
+            <div style="display:flex;justify-content:space-between"><span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#7c858d">Gói data thêm</span><span style="font:600 12px 'IBM Plex Mono',monospace;color:#16191c">+{{ topupPending.gb }} GB</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#7c858d">Số tiền</span><span style="font:600 12px 'IBM Plex Mono',monospace;color:#16191c">{{ topupPending.price }}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#7c858d">Áp dụng cho</span><span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#16191c">{{ topupPending.user }}</span></div>
+          </div>
+          <span style="font:400 11px/1.5 'IBM Plex Sans',sans-serif;color:#8e99a3">Data chỉ được cộng vào tài khoản sau khi thanh toán thành công.</span>
+          <div style="display:flex;gap:8px">
+            <button onClick="{{ confirmTopup }}" style="flex:1;height:32px;border:1px solid #0f8175;border-radius:6px;background:#12a594;cursor:pointer;font:600 12.5px 'IBM Plex Sans',sans-serif;color:#04211e" style-hover="background:#0f8175;color:#fff">Thanh toán & cộng data</button>
+            <button onClick="{{ cancelTopup }}" style="height:32px;padding:0 12px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Huỷ</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isImportOpen }}">
+      <div style="position:fixed;inset:0;background:rgba(15,20,23,.45);display:flex;align-items:center;justify-content:center;z-index:80">
+        <div style="width:460px;background:#fff;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 48px rgba(16,22,26,.28)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font:600 14px 'IBM Plex Sans',sans-serif">Nhập user hàng loạt từ Excel</span>
+            <span onClick="{{ closeImport }}" style="margin-left:auto;cursor:pointer;font:600 14px 'IBM Plex Sans',sans-serif;color:#8e99a3">✕</span>
+          </div>
+          <span style="font:400 11.5px/1.5 'IBM Plex Sans',sans-serif;color:#4b545c">File .xlsx/.csv gồm cột: username, password, loại (hotspot/pppoe), MikroTik (NAS), gói cước.</span>
+          <a href="#" style="font:500 11.5px 'IBM Plex Sans',sans-serif">⇩ Tải file mẫu .xlsx</a>
+          <label style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:110px;border:1.5px dashed #c4cacf;border-radius:8px;cursor:pointer;background:#fafbfc" style-hover="border-color:#12a594">
+            <span style="font:500 12px 'IBM Plex Sans',sans-serif;color:#4b545c">Kéo thả file vào đây hoặc bấm để chọn</span>
+            <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">.xlsx · .csv · tối đa 5.000 dòng</span>
+            <input type="file" accept=".xlsx,.csv" style="display:none">
+          </label>
+          <div style="background:#fafbfc;border:1px solid #eaedef;border-radius:6px;padding:9px 10px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">SAU KHI NHẬP</span>
+            <span style="font:400 11px 'IBM Plex Sans',sans-serif;color:#3d454c">Hệ thống tạo secret PPP/hotspot, gán vào MikroTik chỉ định và đăng ký với RADIUS tương ứng.</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button onClick="{{ closeImport }}" style="flex:1;height:32px;border:1px solid #0f8175;border-radius:6px;background:#12a594;cursor:pointer;font:600 12.5px 'IBM Plex Sans',sans-serif;color:#04211e" style-hover="background:#0f8175;color:#fff">Bắt đầu nhập</button>
+            <button onClick="{{ closeImport }}" style="height:32px;padding:0 12px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Huỷ</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isPackages }}">
+      <div style="display:grid;column-gap:14px;grid-template-columns:1fr 296px;gap:12px;align-items:start">
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Gói cước (RouterOS profiles)</span>
+            <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ pkgCount }} gói · đồng bộ 8/8 thiết bị</span>
+          </div>
+          <div style="display:grid;column-gap:14px;min-width:900px;grid-template-columns:1.5fr .95fr .8fr .85fr .8fr .7fr .9fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>TÊN GÓI</span><span>RATE-LIMIT</span><span>QUOTA</span><span>THỜI HẠN</span><span style="text-align:right">GIÁ / THÁNG</span><span style="text-align:right">DEVICE</span><span style="text-align:right">ĐANG DÙNG</span>
+          </div>
+          <sc-for list="{{ packages }}" as="p" hint-placeholder-count="6">
+            <div onClick="{{ p.pick }}" style="display:grid;column-gap:14px;min-width:900px;grid-template-columns:1.5fr .95fr .8fr .85fr .8fr .7fr .9fr;padding:9px 13px;border-bottom:1px solid #f2f4f5;align-items:center;cursor:pointer;background:{{ p.rowBg }}" style-hover="background:#f7f9f9">
+              <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                <span style="width:3px;height:22px;flex:none;border-radius:2px;background:{{ p.tone }}"></span>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                  <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ p.name }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ p.code }}</span>
+                </div>
+              </div>
+              <span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ p.rate }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ p.quota }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ p.term }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ p.price }}</span>
+              <span style="text-align:right;font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ p.devices }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#0f8175">{{ p.subs }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:11px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">{{ editorTitle }}</span>
+            <span style="font:400 10.5px/1.4 'IBM Plex Mono',monospace;color:#8e99a3">Ghi xuống /ip/hotspot/user/profile và /ppp/profile</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">TÊN GÓI</span>
+            <input value="{{ formName }}" onChange="{{ setFormName }}" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:400 12px 'IBM Plex Sans',sans-serif;color:#16191c;background:#fff;outline:0">
+          </div>
+          <div style="display:grid;column-gap:14px;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">DOWN (Mbps)</span>
+              <input value="{{ formDown }}" onChange="{{ setFormDown }}" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:500 12px 'IBM Plex Mono',monospace;color:#16191c;background:#fff;outline:0">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">UP (Mbps)</span>
+              <input value="{{ formUp }}" onChange="{{ setFormUp }}" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:500 12px 'IBM Plex Mono',monospace;color:#16191c;background:#fff;outline:0">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">THỜI HẠN</span>
+            <div style="display:flex;gap:5px">
+              <sc-for list="{{ termUnitOpts }}" as="u" hint-placeholder-count="2">
+                <button onClick="{{ u.go }}" style="flex:1;height:26px;border:1px solid {{ u.border }};border-radius:6px;cursor:pointer;background:{{ u.bg }};color:{{ u.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600">{{ u.label }}</button>
+              </sc-for>
+            </div>
+            <div style="display:flex;gap:5px">
+              <sc-for list="{{ termOpts }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.go }}" style="flex:1;height:28px;border:1px solid {{ t.border }};border-radius:6px;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }};font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">QUOTA & THIẾT BỊ ĐỒNG THỜI</span>
+            <div style="display:grid;column-gap:14px;grid-template-columns:1fr 74px;gap:8px">
+              <input value="{{ formQuota }}" onChange="{{ setFormQuota }}" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:500 12px 'IBM Plex Mono',monospace;color:#16191c;background:#fff;outline:0">
+              <input value="{{ formDev }}" onChange="{{ setFormDev }}" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:500 12px 'IBM Plex Mono',monospace;color:#16191c;background:#fff;outline:0">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">GIÁ / THÁNG (VND)</span>
+            <input value="{{ formPrice }}" onChange="{{ setFormPrice }}" style="height:30px;border:1px solid #dfe3e6;border-radius:6px;padding:0 9px;font:500 12px 'IBM Plex Mono',monospace;color:#16191c;background:#fff;outline:0">
+          </div>
+          <div style="background:#fafbfc;border:1px solid #eaedef;border-radius:6px;padding:9px 10px;display:flex;flex-direction:column;gap:4px">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">XEM TRƯỚC CLI</span>
+            <span style="font:400 10.5px/1.5 'IBM Plex Mono',monospace;color:#3d454c;word-break:break-all">{{ cliPreview }}</span>
+          </div>
+          <div style="display:flex;gap:7px">
+            <button style="flex:1;height:31px;border:1px solid #0f8175;border-radius:6px;background:#12a594;cursor:pointer;font:600 12px 'IBM Plex Sans',sans-serif;color:#04211e" style-hover="background:#0f8175;color:#fff">Lưu & đẩy xuống 8 thiết bị</button>
+            <button style="height:31px;padding:0 11px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Huỷ</button>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isAssign }}">
+      <div style="display:grid;column-gap:14px;grid-template-columns:1fr 320px;gap:12px;align-items:start">
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;border-bottom:1px solid #eaedef">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Bước 1 · Chọn người dùng</span>
+            <button onClick="{{ selectAll }}" style="margin-left:auto;height:25px;padding:0 9px;border:1px solid #dfe3e6;border-radius:5px;background:#fff;cursor:pointer;font:500 11px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Chọn tất cả</button>
+            <button onClick="{{ clearAll }}" style="height:25px;padding:0 9px;border:1px solid #dfe3e6;border-radius:5px;background:#fff;cursor:pointer;font:500 11px 'IBM Plex Sans',sans-serif;color:#4b545c" style-hover="background:#f4f5f6">Bỏ chọn</button>
+          </div>
+          <div style="display:grid;column-gap:14px;min-width:820px;grid-template-columns:26px 1.4fr .8fr 1.1fr 1.2fr 1fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span></span><span>USERNAME</span><span>LOẠI</span><span>THIẾT BỊ</span><span>GÓI HIỆN TẠI</span><span>SAU KHI GÁN</span>
+          </div>
+          <sc-for list="{{ users }}" as="u" hint-placeholder-count="12">
+            <div onClick="{{ u.toggle }}" style="display:grid;column-gap:14px;min-width:820px;grid-template-columns:26px 1.4fr .8fr 1.1fr 1.2fr 1fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center;cursor:pointer;background:{{ u.rowBg }}" style-hover="background:#f7f9f9">
+              <span style="width:13px;height:13px;border-radius:3px;border:1.5px solid {{ u.boxBorder }};background:{{ u.boxBg }};display:flex;align-items:center;justify-content:center;font:700 9px 'IBM Plex Mono',monospace;color:#fff">{{ u.tick }}</span>
+              <span style="font:500 12px 'IBM Plex Sans',sans-serif">{{ u.name }}</span>
+              <span style="font:500 10px 'IBM Plex Mono',monospace;justify-self:start;padding:2px 6px;border-radius:4px;background:{{ u.typeBg }};color:{{ u.typeFg }}">{{ u.type }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap">{{ u.router }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#8e99a3">{{ u.pkg }}</span>
+              <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;color:{{ u.nextColor }}">{{ u.nextPkg }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:9px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Bước 2 · Chọn MikroTik (NAS/RADIUS)</span>
+            <span style="font:400 10.5px/1.4 'IBM Plex Mono',monospace;color:#8e99a3">Để trống = giữ nguyên thiết bị hiện tại của mỗi user</span>
+            <sc-for list="{{ assignRouters }}" as="a" hint-placeholder-count="6">
+              <div onClick="{{ a.pick }}" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid {{ a.cardBorder }};border-radius:7px;cursor:pointer;background:{{ a.cardBg }}" style-hover="border-color:#12a594">
+                <span style="width:12px;height:12px;flex:none;border-radius:50%;border:1.5px solid {{ a.radioBorder }};background:{{ a.radioBg }};box-shadow:{{ a.radioRing }}"></span>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                  <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ a.name }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ a.ip }} · {{ a.site }}</span>
+                </div>
+                <span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 6px;border-radius:4px;background:{{ a.stBg }};color:{{ a.stFg }};white-space:nowrap">{{ a.status }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:9px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Bước 3 · Chọn gói cần gán</span>
+            <sc-for list="{{ packages }}" as="p" hint-placeholder-count="6">
+              <div onClick="{{ p.pick }}" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid {{ p.cardBorder }};border-radius:7px;cursor:pointer;background:{{ p.cardBg }}" style-hover="border-color:#12a594">
+                <span style="width:12px;height:12px;flex:none;border-radius:50%;border:1.5px solid {{ p.radioBorder }};background:{{ p.radioBg }};box-shadow:{{ p.radioRing }}"></span>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                  <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ p.name }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ p.rate }} · {{ p.quota }} · {{ p.term }}</span>
+                </div>
+                <span style="margin-left:auto;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ p.price }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Bước 4 · Xác nhận</span>
+            <sc-for list="{{ summary }}" as="s" hint-placeholder-count="4">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <span style="font:400 11px 'IBM Plex Mono',monospace;letter-spacing:.05em;color:#7c858d">{{ s.k }}</span>
+                <span style="font:600 12px 'IBM Plex Mono',monospace;color:{{ s.color }};text-align:right">{{ s.v }}</span>
+              </div>
+            </sc-for>
+            <div style="background:#fafbfc;border:1px solid #eaedef;border-radius:6px;padding:9px 10px;display:flex;flex-direction:column;gap:3px">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">TÁC VỤ SẼ CHẠY</span>
+              <span style="font:400 10.5px/1.5 'IBM Plex Mono',monospace;color:#3d454c;word-break:break-all">{{ assignCli }}</span>
+            </div>
+            <label style="display:flex;align-items:center;gap:7px;font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;cursor:pointer">
+              <input type="checkbox" checked="{{ true }}" style="width:13px;height:13px;accent-color:#12a594">
+              Ngắt kết nối hiện tại để áp gói ngay
+            </label>
+            <button onClick="{{ applyAssign }}" style="height:33px;border:1px solid #0f8175;border-radius:6px;background:{{ applyBg }};cursor:pointer;font:600 12.5px 'IBM Plex Sans',sans-serif;color:{{ applyFg }}" style-hover="background:#0f8175;color:#fff">{{ applyLabel }}</button>
+            <sc-if value="{{ applied }}">
+              <span style="font:500 11px 'IBM Plex Mono',monospace;color:#0f8175">✓ ĐÃ ÁP DỤNG · {{ appliedNote }}</span>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isInvoices }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;column-gap:14px;grid-template-columns:repeat(4,1fr);gap:10px">
+          <sc-for list="{{ invoiceKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">{{ k.label }}</span>
+              <span style="font:600 22px/1 'IBM Plex Mono',monospace;color:#16191c;letter-spacing:-.01em">{{ k.value }}</span>
+              <span style="font:500 10.5px 'IBM Plex Sans',sans-serif;color:{{ k.deltaColor }}">{{ k.delta }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <sc-for list="{{ invoiceFilters }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.go }}" style="height:28px;padding:0 11px;border:1px solid {{ f.border }};border-radius:6px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;white-space:nowrap">{{ f.label }}</button>
+          </sc-for>
+          <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">PHẠM VI {{ scopeName }}</span>
+        </div>
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:grid;column-gap:14px;min-width:820px;grid-template-columns:1.2fr 1.6fr .8fr .9fr .9fr 1fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>MÃ HOÁ ĐƠN</span><span>TENANT</span><span>KỲ</span><span style="text-align:right">SỐ TIỀN</span><span>HẠN THANH TOÁN</span><span>TRẠNG THÁI</span>
+          </div>
+          <sc-for list="{{ invoiceRows }}" as="v" hint-placeholder-count="8">
+            <div style="display:grid;column-gap:14px;min-width:820px;grid-template-columns:1.2fr 1.6fr .8fr .9fr .9fr 1fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+              <span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ v.id }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ v.tenant }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ v.period }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ v.amount }}</span>
+              <span style="font:400 11px 'IBM Plex Mono',monospace;color:#4b545c">{{ v.due }}</span>
+              <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:{{ v.stBg }};color:{{ v.stFg }};white-space:nowrap">{{ v.status }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isRadius }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;column-gap:14px;grid-template-columns:repeat(5,1fr);gap:10px">
+          <sc-for list="{{ radiusKpis }}" as="k" hint-placeholder-count="5">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">{{ k.label }}</span>
+              <span style="font:600 22px/1 'IBM Plex Mono',monospace;color:#16191c;letter-spacing:-.01em">{{ k.value }}</span>
+              <span style="font:500 10.5px 'IBM Plex Sans',sans-serif;color:{{ k.deltaColor }}">{{ k.delta }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:8px">
+          <sc-for list="{{ radiusTabs }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.go }}" style="height:28px;padding:0 11px;border:1px solid {{ f.border }};border-radius:6px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;white-space:nowrap">{{ f.label }}</button>
+          </sc-for>
+          <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">FREERADIUS 3.2 · CoA UDP/3799 · PHẠM VI {{ scopeName }}</span>
+        </div>
+
+        <sc-if value="{{ isRadTab1 }}">
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:grid;column-gap:14px;min-width:900px;grid-template-columns:1.5fr 1.5fr 1.1fr .7fr .7fr .6fr .8fr 1fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>NAS / IP</span><span>TENANT</span><span>SHARED SECRET</span><span style="text-align:right">AUTH</span><span style="text-align:right">ACCT</span><span>CoA</span><span style="text-align:right">SESSION</span><span>TRẠNG THÁI</span>
+          </div>
+          <sc-for list="{{ nasRows }}" as="n" hint-placeholder-count="6">
+            <div style="display:grid;column-gap:14px;min-width:900px;grid-template-columns:1.5fr 1.5fr 1.1fr .7fr .7fr .6fr .8fr 1fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+              <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ n.name }}</span>
+                <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ n.ip }}</span>
+              </div>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.tenant }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ n.secretMask }}</span>
+              <span style="text-align:right;font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ n.auth }}</span>
+              <span style="text-align:right;font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ n.acct }}</span>
+              <span style="font:500 11px 'IBM Plex Mono',monospace;color:{{ n.coaColor }}">{{ n.coa }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ n.sessions }}</span>
+              <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:{{ n.stBg }};color:{{ n.stFg }};white-space:nowrap">{{ n.state }}</span>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ isRadTab2 }}">
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:grid;column-gap:14px;min-width:880px;grid-template-columns:1.3fr 1.1fr 1.1fr .8fr .8fr 1.1fr 1.2fr .9fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>USERNAME</span><span>NAS</span><span>FRAMED-IP</span><span>BẮT ĐẦU</span><span>THỜI LƯỢNG</span><span style="text-align:right">IN / OUT</span><span>GÓI</span><span>TÁC VỤ</span>
+          </div>
+          <sc-for list="{{ radSessions }}" as="r" hint-placeholder-count="8">
+            <div style="display:grid;column-gap:14px;min-width:880px;grid-template-columns:1.3fr 1.1fr 1.1fr .8fr .8fr 1.1fr 1.2fr .9fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+              <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ r.user }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap">{{ r.nas }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.ip }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.started }}</span>
+              <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.dur }}</span>
+              <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ r.inOut }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap">{{ r.pkg }}</span>
+              <span style="font:500 11px 'IBM Plex Sans',sans-serif;color:{{ r.actionColor }};cursor:pointer;white-space:nowrap">Ngắt phiên</span>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ isRadTab3 }}">
+        <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+          <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Dòng log AAA</span>
+            <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">LIVE TAIL · detail + sql</span>
+          </div>
+          <div style="display:grid;column-gap:14px;min-width:820px;grid-template-columns:.7fr 1.1fr 1.1fr 1fr 2.2fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+            <span>THỜI ĐIỂM</span><span>LOẠI GÓI TIN</span><span>USERNAME</span><span>NAS</span><span>CHI TIẾT</span>
+          </div>
+          <sc-for list="{{ radLogs }}" as="l" hint-placeholder-count="6">
+            <div style="display:grid;column-gap:14px;min-width:820px;grid-template-columns:.7fr 1.1fr 1.1fr 1fr 2.2fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+              <span style="font:400 11px 'IBM Plex Mono',monospace;color:#8e99a3">{{ l.t }}</span>
+              <span style="font:600 11px 'IBM Plex Mono',monospace;color:{{ l.color }};white-space:nowrap">{{ l.k }}</span>
+              <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ l.u }}</span>
+              <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap">{{ l.nas }}</span>
+              <span style="font:400 11px 'IBM Plex Mono',monospace;color:#4b545c">{{ l.note }}</span>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ isRadTab4 }}">
+        <div style="display:grid;column-gap:14px;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+          <sc-for list="{{ radPolicies }}" as="p" hint-placeholder-count="6">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:12px 13px;display:flex;gap:9px;align-items:flex-start">
+              <span style="width:13px;height:13px;flex:none;margin-top:2px;border-radius:3px;border:1.5px solid {{ p.border }};background:{{ p.bg }};display:flex;align-items:center;justify-content:center;font:700 9px 'IBM Plex Mono',monospace;color:#fff">{{ p.tick }}</span>
+              <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+                <span style="font:600 12px 'IBM Plex Sans',sans-serif">{{ p.name }}</span>
+                <span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ p.v }}</span>
+                <span style="font:400 11px/1.45 'IBM Plex Sans',sans-serif;color:#7c858d">{{ p.note }}</span>
+              </div>
+              <span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 6px;border-radius:4px;background:{{ p.tagBg }};color:{{ p.tagFg }};white-space:nowrap;flex:none">{{ p.tag }}</span>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isZerotier }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;column-gap:14px;grid-template-columns:repeat(4,1fr);gap:10px">
+          <sc-for list="{{ ztKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">{{ k.label }}</span>
+              <span style="font:600 22px/1 'IBM Plex Mono',monospace;color:#16191c;letter-spacing:-.01em">{{ k.value }}</span>
+              <span style="font:500 10.5px 'IBM Plex Sans',sans-serif;color:{{ k.deltaColor }}">{{ k.delta }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:250px minmax(0,1fr);gap:12px;align-items:start">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px;display:flex;flex-direction:column;gap:8px;min-width:0">
+            <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d;padding:0 2px">MẠNG ZEROTIER · {{ ztNetCount }}</span>
+            <sc-for list="{{ ztNets }}" as="n" hint-placeholder-count="4">
+              <div onClick="{{ n.pick }}" style="display:flex;flex-direction:column;gap:3px;padding:9px 10px;border:1px solid {{ n.cardBorder }};border-radius:7px;cursor:pointer;background:{{ n.cardBg }}" style-hover="border-color:#12a594">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="width:6px;height:6px;flex:none;border-radius:50%;background:{{ n.dotColor }}"></span>
+                  <span style="font:600 12px 'IBM Plex Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.name }}</span>
+                  <span style="margin-left:auto;font:500 10.5px 'IBM Plex Mono',monospace;color:#4b545c;flex:none">{{ n.members }}</span>
+                </div>
+                <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3;padding-left:13px">{{ n.tenant }}</span>
+              </div>
+            </sc-for>
+            <button style="height:29px;border:1px solid #dfe3e6;border-radius:6px;background:#fff;cursor:pointer;font:500 12px 'IBM Plex Sans',sans-serif;color:#4b545c;margin-top:2px" style-hover="background:#f4f5f6">+ Tạo mạng cho tenant</button>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+              <div style="display:flex;flex-direction:column;gap:1px">
+                <span style="font:600 13px 'IBM Plex Sans',sans-serif">{{ ztName }}</span>
+                <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3">{{ ztId }} · {{ ztCidr }}</span>
+              </div>
+              <sc-for list="{{ ztStats }}" as="s" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:400 9px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">{{ s.k }}</span>
+                  <span style="font:600 12.5px 'IBM Plex Mono',monospace;color:{{ s.color }}">{{ s.v }}</span>
+                </div>
+              </sc-for>
+              <button style="margin-left:auto;height:27px;padding:0 10px;border:1px solid {{ ztApproveBorder }};border-radius:6px;background:{{ ztApproveBg }};cursor:pointer;font:600 11px 'IBM Plex Sans',sans-serif;color:{{ ztApproveFg }};white-space:nowrap" style-hover="background:#0f8175;color:#fff">{{ ztApproveLabel }}</button>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px">
+              <sc-for list="{{ ztTabs }}" as="f" hint-placeholder-count="3">
+                <button onClick="{{ f.go }}" style="height:28px;padding:0 11px;border:1px solid {{ f.border }};border-radius:6px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;white-space:nowrap">{{ f.label }}</button>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ isZtTabMembers }}">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+              <div style="display:grid;column-gap:14px;min-width:680px;grid-template-columns:1.3fr .9fr 1.1fr .9fr .9fr .9fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+                <span>NODE</span><span>VAI TRÒ</span><span>IP ẢO</span><span style="text-align:right">LATENCY</span><span>UỶ QUYỀN</span><span>KẾT NỐI</span>
+              </div>
+              <sc-for list="{{ ztMembers }}" as="m" hint-placeholder-count="9">
+                <div style="display:grid;column-gap:14px;min-width:680px;grid-template-columns:1.3fr .9fr 1.1fr .9fr .9fr .9fr;padding:9px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+                  <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                    <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ m.name }}</span>
+                    <span style="font:400 9.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ m.addr }} · {{ m.path }}</span>
+                  </div>
+                  <span style="font:400 11px 'IBM Plex Mono',monospace;color:#4b545c">{{ m.role }}</span>
+                  <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ m.ip }}</span>
+                  <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:{{ m.latColor }}">{{ m.latency }}</span>
+                  <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 7px;border-radius:4px;background:{{ m.authBg }};color:{{ m.authFg }};white-space:nowrap">{{ m.auth }}</span>
+                  <span style="display:flex;align-items:center;gap:6px;font:400 11px 'IBM Plex Mono',monospace;color:#4b545c;white-space:nowrap"><span style="width:6px;height:6px;flex:none;border-radius:50%;background:{{ m.onColor }}"></span>{{ m.online }}</span>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ isZtTabRoutes }}">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+              <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+                <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Định tuyến được quảng bá</span>
+                <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">DÙNG ĐỂ WINBOX/SSH VÀO ROUTER SAU NAT</span>
+              </div>
+              <div style="display:grid;column-gap:14px;min-width:560px;grid-template-columns:1fr 1fr 2fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+                <span>ĐÍCH</span><span>QUA</span><span>GHI CHÚ</span>
+              </div>
+              <sc-for list="{{ ztRoutes }}" as="r" hint-placeholder-count="4">
+                <div style="display:grid;column-gap:14px;min-width:560px;grid-template-columns:1fr 1fr 2fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+                  <span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ r.dest }}</span>
+                  <span style="font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ r.via }}</span>
+                  <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#7c858d">{{ r.note }}</span>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+
+            <sc-if value="{{ isZtTabFlow }}">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:10px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Quy tắc luồng (flow rules)</span>
+              <sc-for list="{{ ztFlow }}" as="f" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid #f2f4f5">
+                  <span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c;word-break:break-all">{{ f.r }}</span>
+                  <span style="font:400 11px/1.4 'IBM Plex Sans',sans-serif;color:#7c858d">{{ f.note }}</span>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isTenants }}">
+      <div style="display:grid;column-gap:14px;grid-template-columns:1fr 330px;gap:12px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 13px;border-bottom:1px solid #eaedef">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Cây phân cấp tổ chức</span>
+              <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ tenantCount }} NODE · {{ tenantLevels }} CẤP</span>
+              <button style="margin-left:auto;height:25px;padding:0 9px;border:1px solid #dfe3e6;border-radius:5px;background:#fff;cursor:pointer;font:500 11px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap" style-hover="background:#f4f5f6">+ Thêm công ty</button>
+            </div>
+            <div style="display:grid;column-gap:14px;min-width:880px;grid-template-columns:2.1fr .85fr .8fr .8fr .95fr .9fr .95fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+              <span>TỔ CHỨC</span><span>CẤP</span><span style="text-align:right">ROUTER</span><span style="text-align:right">USER</span><span style="text-align:right">QUOTA USER</span><span style="text-align:right">DOANH THU/TH</span><span>QUYỀN</span>
+            </div>
+            <sc-for list="{{ tenantRows }}" as="t" hint-placeholder-count="10">
+              <div onClick="{{ t.select }}" style="display:grid;column-gap:14px;min-width:880px;grid-template-columns:2.1fr .85fr .8fr .8fr .95fr .9fr .95fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center;cursor:pointer;background:{{ t.rowBg }}" style-hover="background:#f7f9f9">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;padding-left:{{ t.indent }}">
+                  <span style="width:3px;height:20px;flex:none;border-radius:2px;background:{{ t.tone }}"></span>
+                  <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                    <span style="font:{{ t.nameFont }} 'IBM Plex Sans',sans-serif;color:#16191c;white-space:nowrap">{{ t.name }}</span>
+                    <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ t.code }}</span>
+                  </div>
+                </div>
+                <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 6px;border-radius:4px;background:{{ t.kindBg }};color:{{ t.kindFg }};white-space:nowrap">{{ t.kind }}</span>
+                <span style="text-align:right;font:400 11.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ t.routers }}</span>
+                <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ t.users }}</span>
+                <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end">
+                  <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#4b545c">{{ t.quotaLabel }}</span>
+                  <span style="width:100%;height:3px;border-radius:2px;background:#eaedef;overflow:hidden;display:block">
+                    <span style="display:block;height:3px;border-radius:2px;width:{{ t.quotaPct }};background:{{ t.quotaColor }}"></span>
+                  </span>
+                </div>
+                <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ t.revenue }}</span>
+                <span style="justify-self:start;font:400 10.5px 'IBM Plex Mono',monospace;color:#4b545c;white-space:nowrap">{{ t.role }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+            <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Tài khoản quản trị trong phạm vi</span>
+              <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ adminCount }} TÀI KHOẢN</span>
+            </div>
+            <div style="display:grid;column-gap:14px;min-width:700px;grid-template-columns:1.2fr 1.6fr 1.1fr 1.3fr .9fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+              <span>HỌ TÊN</span><span>TỔ CHỨC</span><span>VAI TRÒ</span><span>PHẠM VI</span><span>2FA</span>
+            </div>
+            <sc-for list="{{ admins }}" as="a" hint-placeholder-count="6">
+              <div style="display:grid;column-gap:14px;min-width:700px;grid-template-columns:1.2fr 1.6fr 1.1fr 1.3fr .9fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+                <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ a.name }}</span>
+                <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap">{{ a.tenant }}</span>
+                <span style="justify-self:start;font:500 10px 'IBM Plex Mono',monospace;padding:2px 6px;border-radius:4px;background:{{ a.roleBg }};color:{{ a.roleFg }};white-space:nowrap">{{ a.role }}</span>
+                <span style="font:400 11px 'IBM Plex Mono',monospace;color:#4b545c;white-space:nowrap">{{ a.scope }}</span>
+                <span style="font:500 10.5px 'IBM Plex Mono',monospace;color:{{ a.mfaColor }}">{{ a.mfa }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">{{ selTenantName }}</span>
+              <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">{{ selTenantPath }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid #eaedef;border-bottom:1px solid #eaedef">
+              <span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#7c858d">THÔNG TIN KHÁCH HÀNG</span>
+              <sc-for list="{{ selTenantProfile }}" as="p" hint-placeholder-count="6">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                  <span style="font:400 10.5px 'IBM Plex Mono',monospace;letter-spacing:.03em;color:#8e99a3;white-space:nowrap">{{ p.k }}</span>
+                  <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;color:#16191c;text-align:right">{{ p.v }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-for list="{{ selTenantStats }}" as="s" hint-placeholder-count="5">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <span style="font:400 11px 'IBM Plex Mono',monospace;letter-spacing:.04em;color:#7c858d;white-space:nowrap">{{ s.k }}</span>
+                <span style="font:600 12px 'IBM Plex Mono',monospace;color:{{ s.color }};text-align:right">{{ s.v }}</span>
+              </div>
+            </sc-for>
+            <button onClick="{{ applyScopeToSel }}" style="height:30px;border:1px solid #0f8175;border-radius:6px;background:#12a594;cursor:pointer;font:600 12px 'IBM Plex Sans',sans-serif;color:#04211e" style-hover="background:#0f8175;color:#fff">Chuyển sang phạm vi này</button>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Kế thừa gói cước</span>
+              <span style="font:400 10.5px/1.4 'IBM Plex Mono',monospace;color:#8e99a3">Gói của cấp trên tự áp xuống, cấp dưới có thể ghi đè giá</span>
+            </div>
+            <sc-for list="{{ inheritRows }}" as="i" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid {{ i.border }};border-radius:6px;background:{{ i.bg }}">
+                <span style="width:3px;height:18px;flex:none;border-radius:2px;background:{{ i.tone }}"></span>
+                <div style="display:flex;flex-direction:column;gap:1px;min-width:0">
+                  <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ i.name }}</span>
+                  <span style="font:400 10px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ i.note }}</span>
+                </div>
+                <span style="margin-left:auto;font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.05em;padding:2px 6px;border-radius:4px;background:{{ i.tagBg }};color:{{ i.tagFg }};white-space:nowrap">{{ i.tag }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px;display:flex;flex-direction:column;gap:9px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Giới hạn & quyền của cấp này</span>
+            <sc-for list="{{ perms }}" as="p" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="width:13px;height:13px;flex:none;border-radius:3px;border:1.5px solid {{ p.border }};background:{{ p.bg }};display:flex;align-items:center;justify-content:center;font:700 9px 'IBM Plex Mono',monospace;color:#fff">{{ p.tick }}</span>
+                <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:{{ p.fg }}">{{ p.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isAnalytics }}">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <sc-for list="{{ rangeOpts }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.go }}" style="height:28px;padding:0 11px;border:1px solid {{ f.border }};border-radius:6px;cursor:pointer;background:{{ f.bg }};color:{{ f.fg }};font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500">{{ f.label }}</button>
+          </sc-for>
+          <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">NGUỒN: ACCOUNTING + RADIUS · GRANULARITY 1H</span>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:repeat(5,1fr);gap:10px">
+          <sc-for list="{{ anaKpis }}" as="k" hint-placeholder-count="5">
+            <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:11px 13px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:500 9.5px 'IBM Plex Mono',monospace;letter-spacing:.09em;color:#7c858d">{{ k.label }}</span>
+              <span style="font:600 22px/1 'IBM Plex Mono',monospace;color:#16191c;letter-spacing:-.01em">{{ k.value }}</span>
+              <span style="font:500 10.5px 'IBM Plex Sans',sans-serif;color:{{ k.deltaColor }}">{{ k.delta }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:1.35fr 1fr;gap:12px;align-items:start">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Tăng trưởng thuê bao</span>
+              <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">NET ADD / CHURN · 12 THÁNG</span>
+              <div style="margin-left:auto;display:flex;gap:12px">
+                <span style="display:flex;align-items:center;gap:5px;font:400 10.5px 'IBM Plex Mono',monospace;color:#4b545c"><span style="width:8px;height:8px;border-radius:2px;background:#12a594"></span>MỚI</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10.5px 'IBM Plex Mono',monospace;color:#4b545c"><span style="width:8px;height:8px;border-radius:2px;background:#d9a0a2"></span>RỜI MẠNG</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:8px;height:150px">
+              <sc-for list="{{ growth }}" as="g" hint-placeholder-count="12">
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0">
+                  <div style="width:100%;display:flex;align-items:flex-end;justify-content:center;gap:2px;height:124px">
+                    <span style="width:44%;border-radius:2px 2px 0 0;background:#12a594;height:{{ g.addH }}"></span>
+                    <span style="width:44%;border-radius:2px 2px 0 0;background:#d9a0a2;height:{{ g.churnH }}"></span>
+                  </div>
+                  <span style="font:400 9.5px 'IBM Plex Mono',monospace;color:#9aa2a9">{{ g.m }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Phân bổ theo gói</span>
+              <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">{{ pkgMixTotal }} THUÊ BAO</span>
+            </div>
+            <sc-for list="{{ pkgMix }}" as="m" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <span style="font:500 11.5px 'IBM Plex Sans',sans-serif;color:#16191c;white-space:nowrap">{{ m.name }}</span>
+                  <span style="margin-left:auto;font:500 11px 'IBM Plex Mono',monospace;color:#4b545c">{{ m.subs }}</span>
+                  <span style="font:400 10.5px 'IBM Plex Mono',monospace;color:#9aa2a9;width:38px;text-align:right">{{ m.pct }}</span>
+                </div>
+                <span style="height:5px;border-radius:3px;background:#eef0f2;overflow:hidden;display:block">
+                  <span style="display:block;height:5px;border-radius:3px;width:{{ m.pct }};background:{{ m.tone }}"></span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;align-items:baseline;gap:10px">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Mật độ sử dụng theo giờ</span>
+              <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3">PEAK 20:00–22:00</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <sc-for list="{{ heat }}" as="row" hint-placeholder-count="7">
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="width:26px;flex:none;font:400 9.5px 'IBM Plex Mono',monospace;color:#9aa2a9">{{ row.d }}</span>
+                  <div style="flex:1;display:flex;gap:2px;min-width:0">
+                    <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="24">
+                      <span style="flex:1;height:13px;border-radius:2px;background:{{ c.bg }}"></span>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="display:flex;align-items:center;gap:7px;padding-top:2px">
+                <span style="width:26px;flex:none"></span>
+                <div style="flex:1;display:flex;justify-content:space-between;font:400 9px 'IBM Plex Mono',monospace;color:#b3bac0">
+                  <span>00</span><span>04</span><span>08</span><span>12</span><span>16</span><span>20</span><span>23</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;overflow-x:auto">
+            <div style="display:flex;align-items:center;padding:10px 13px;border-bottom:1px solid #eaedef">
+              <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Top thuê bao ngốn băng thông</span>
+              <span style="margin-left:auto;font:400 10.5px 'IBM Plex Mono',monospace;color:#8e99a3;white-space:nowrap">30 NGÀY</span>
+            </div>
+            <div style="display:grid;column-gap:14px;min-width:460px;grid-template-columns:1.3fr 1.1fr .9fr 1.5fr;padding:7px 13px;background:#fafbfc;border-bottom:1px solid #eaedef;font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.07em;color:#7c858d">
+              <span>USERNAME</span><span>GÓI</span><span style="text-align:right">DATA</span><span>SO VỚI TRUNG BÌNH GÓI</span>
+            </div>
+            <sc-for list="{{ topUsers }}" as="t" hint-placeholder-count="7">
+              <div style="display:grid;column-gap:14px;min-width:460px;grid-template-columns:1.3fr 1.1fr .9fr 1.5fr;padding:8px 13px;border-bottom:1px solid #f2f4f5;align-items:center" style-hover="background:#fafbfc">
+                <span style="font:500 12px 'IBM Plex Sans',sans-serif;white-space:nowrap">{{ t.name }}</span>
+                <span style="font:400 11.5px 'IBM Plex Sans',sans-serif;color:#4b545c;white-space:nowrap">{{ t.pkg }}</span>
+                <span style="text-align:right;font:500 11.5px 'IBM Plex Mono',monospace;color:#16191c">{{ t.data }}</span>
+                <div style="display:flex;align-items:center;gap:7px">
+                  <span style="flex:1;height:4px;border-radius:2px;background:#eef0f2;overflow:hidden;display:block">
+                    <span style="display:block;height:4px;border-radius:2px;width:{{ t.pct }};background:{{ t.tone }}"></span>
+                  </span>
+                  <span style="font:500 10.5px 'IBM Plex Mono',monospace;color:{{ t.tone }};width:40px;text-align:right">{{ t.mult }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="display:grid;column-gap:14px;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:start">
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Vòng đời thuê bao</span>
+            <sc-for list="{{ funnel }}" as="f" hint-placeholder-count="5">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <span style="font:400 11px 'IBM Plex Mono',monospace;letter-spacing:.04em;color:#7c858d;white-space:nowrap">{{ f.k }}</span>
+                  <span style="margin-left:auto;font:600 12px 'IBM Plex Mono',monospace;color:{{ f.color }}">{{ f.v }}</span>
+                </div>
+                <span style="height:4px;border-radius:2px;background:#eef0f2;overflow:hidden;display:block">
+                  <span style="display:block;height:4px;border-radius:2px;width:{{ f.pct }};background:{{ f.color }}"></span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Nâng / hạ gói</span>
+            <sc-for list="{{ migration }}" as="m" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font:400 11px 'IBM Plex Mono',monospace;color:#4b545c;white-space:nowrap">{{ m.from }}</span>
+                <span style="font:400 11px 'IBM Plex Mono',monospace;color:#c4cacf">→</span>
+                <span style="font:400 11px 'IBM Plex Mono',monospace;color:#4b545c;white-space:nowrap">{{ m.to }}</span>
+                <span style="margin-left:auto;font:600 12px 'IBM Plex Mono',monospace;color:{{ m.color }};white-space:nowrap">{{ m.n }}</span>
+              </div>
+            </sc-for>
+            <div style="margin-top:auto;padding-top:6px;border-top:1px solid #eaedef;font:400 10.5px/1.5 'IBM Plex Mono',monospace;color:#8e99a3">NET ARPU +6.400 đ/user</div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #dfe3e6;border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:9px">
+            <span style="font:600 12.5px 'IBM Plex Sans',sans-serif">Gợi ý hành động</span>
+            <sc-for list="{{ insights }}" as="i" hint-placeholder-count="4">
+              <div style="display:flex;gap:8px;align-items:flex-start">
+                <span style="width:6px;height:6px;flex:none;border-radius:50%;margin-top:4px;background:{{ i.color }}"></span>
+                <span style="font:400 11.5px/1.45 'IBM Plex Sans',sans-serif;color:#3d454c">{{ i.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showTrafficChart&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Tổng quan&quot;}}">
+const ROUTERS = [
+  {name:'HN-CORE-01', ip:'10.10.0.1', site:'Hà Nội · Cầu Giấy', model:'CCR2004', ros:'7.15.3', uptime:'184d 06h', cpu:41, ram:38, online:812, status:'ONLINE'},
+  {name:'HN-EDGE-04', ip:'10.10.4.1', site:'Hà Nội · Long Biên', model:'RB5009UG', ros:'7.15.3', uptime:'92d 11h', cpu:78, ram:64, online:604, status:'ONLINE'},
+  {name:'DN-CORE-01', ip:'10.20.0.1', site:'Đà Nẵng · Hải Châu', model:'CCR1036', ros:'7.14.2', uptime:'311d 02h', cpu:56, ram:49, online:731, status:'ONLINE'},
+  {name:'HCM-CORE-02', ip:'10.30.0.2', site:'TP.HCM · Q7', model:'CCR2116', ros:'7.15.3', uptime:'57d 19h', cpu:92, ram:81, online:1146, status:'TẢI CAO'},
+  {name:'HCM-EDGE-07', ip:'10.30.7.1', site:'TP.HCM · Bình Thạnh', model:'RB4011', ros:'7.13.5', uptime:'12d 04h', cpu:33, ram:41, online:388, status:'ONLINE'},
+  {name:'CT-EDGE-02', ip:'10.40.2.1', site:'Cần Thơ · Ninh Kiều', model:'RB3011', ros:'7.12.1', uptime:'—', cpu:0, ram:0, online:0, status:'MẤT KẾT NỐI'},
+  {name:'BD-EDGE-01', ip:'10.50.1.1', site:'Bình Dương · Thuận An', model:'RB5009UG', ros:'7.15.3', uptime:'146d 22h', cpu:47, ram:44, online:497, status:'ONLINE'},
+  {name:'HP-EDGE-03', ip:'10.60.3.1', site:'Hải Phòng · Lê Chân', model:'RB2011', ros:'7.11.2', uptime:'8d 03h', cpu:19, ram:71, online:214, status:'CẢNH BÁO'},
+];
+
+const PACKAGES = [
+  {name:'Home 30M', code:'pkg-home-30', rate:'30M/15M', quota:'200 GB', term:'30 ngày', price:'165.000', devices:'2', subs:'1.842', tone:'#12a594'},
+  {name:'Home 60M', code:'pkg-home-60', rate:'60M/30M', quota:'400 GB', term:'30 ngày', price:'245.000', devices:'4', subs:'1.317', tone:'#0f8175'},
+  {name:'Home 150M Pro', code:'pkg-home-150', rate:'150M/75M', quota:'800 GB', term:'30 ngày', price:'420.000', devices:'6', subs:'706', tone:'#0b5f56'},
+  {name:'Hotspot Ngày', code:'pkg-hs-day', rate:'20M/10M', quota:'8 GB', term:'24 giờ', price:'20.000', devices:'1', subs:'488', tone:'#b7791f'},
+  {name:'Hotspot Tuần', code:'pkg-hs-week', rate:'25M/12M', quota:'40 GB', term:'7 ngày', price:'75.000', devices:'2', subs:'271', tone:'#a2691a'},
+  {name:'Doanh nghiệp 300M', code:'pkg-biz-300', rate:'300M/300M', quota:'3.000 GB', term:'30 ngày', price:'1.850.000', devices:'20', subs:'188', tone:'#3d454c'},
+];
+
+const USERS = [
+  {name:'nguyenvana', mac:'B8:27:EB:1A:4C:90', type:'PPPOE', router:'HN-CORE-01', pkg:'Home 60M', used:412, cap:400, expiry:'12/09/2026', status:'HOẠT ĐỘNG'},
+  {name:'tranthib', mac:'DC:A6:32:70:11:2F', type:'PPPOE', router:'HN-EDGE-04', pkg:'Home 30M', used:88, cap:200, expiry:'02/09/2026', status:'HOẠT ĐỘNG'},
+  {name:'hs-04812', mac:'A4:C1:38:9E:07:B3', type:'HOTSPOT', router:'HCM-CORE-02', pkg:'Hotspot Ngày', used:6.4, cap:8, expiry:'Hôm nay 23:59', status:'ONLINE'},
+  {name:'lequangc', mac:'E4:5F:01:22:8D:14', type:'PPPOE', router:'DN-CORE-01', pkg:'Home 150M Pro', used:1204, cap:800, expiry:'28/09/2026', status:'HOẠT ĐỘNG'},
+  {name:'hs-04907', mac:'F0:9F:C2:44:16:AA', type:'HOTSPOT', router:'HCM-EDGE-07', pkg:'Hotspot Tuần', used:37.2, cap:40, expiry:'31/08/2026', status:'GẦN HẾT QUOTA'},
+  {name:'cty-minhphat', mac:'CC:2D:E0:5B:33:71', type:'PPPOE', router:'HCM-CORE-02', pkg:'Doanh nghiệp 300M', used:8940, cap:3000, expiry:'15/09/2026', status:'HOẠT ĐỘNG'},
+  {name:'phamthid', mac:'48:8F:5A:2C:90:04', type:'PPPOE', router:'BD-EDGE-01', pkg:'Home 30M', used:139, cap:200, expiry:'29/08/2026', status:'SẮP HẾT HẠN'},
+  {name:'hoangvane', mac:'7C:2E:BD:61:AF:52', type:'PPPOE', router:'HP-EDGE-03', pkg:'Home 60M', used:0, cap:400, expiry:'20/08/2026', status:'TẠM NGƯNG'},
+  {name:'hs-05011', mac:'20:C0:47:88:3E:19', type:'HOTSPOT', router:'HN-EDGE-04', pkg:'Hotspot Ngày', used:2.1, cap:8, expiry:'Hôm nay 23:59', status:'ONLINE'},
+  {name:'vuthif', mac:'9C:5C:8E:74:6B:2D', type:'PPPOE', router:'HN-CORE-01', pkg:'Home 60M', used:322, cap:400, expiry:'08/09/2026', status:'HOẠT ĐỘNG'},
+  {name:'dangvang', mac:'34:97:F6:12:55:C8', type:'PPPOE', router:'CT-EDGE-02', pkg:'Home 30M', used:74, cap:200, expiry:'05/09/2026', status:'MẤT TÍN HIỆU'},
+  {name:'cty-anbinh', mac:'D8:0D:17:39:71:60', type:'PPPOE', router:'DN-CORE-01', pkg:'Doanh nghiệp 300M', used:5218, cap:3000, expiry:'01/10/2026', status:'HOẠT ĐỘNG'},
+];
+
+const TERMS_DAY = ['1 ngày','3 ngày','7 ngày','15 ngày'];
+const TERMS_MONTH = ['1 tháng','3 tháng','6 tháng','12 tháng'];
+
+function ifacesFor(r) {
+  const base = r.online || 100;
+  return [
+    {name:'ether1-WAN', kind:'WAN', ip:'203.113.' + (base % 200) + '.' + ((base*3)%250), rx: (base*0.9).toFixed(1), tx: (base*0.31).toFixed(1), status: r.status === 'MẤT KẾT NỐI' ? 'DOWN' : 'UP'},
+    {name:'ether2-WAN-BACKUP', kind:'WAN', ip:'118.70.' + (base % 180) + '.' + ((base*7)%240), rx:(base*0.05).toFixed(1), tx:(base*0.02).toFixed(1), status: r.status === 'MẤT KẾT NỐI' ? 'DOWN' : (base % 4 === 0 ? 'STANDBY' : 'UP')},
+    {name:'ether3-LAN', kind:'ETHER', ip:'10.10.0.254', rx:(base*0.72).toFixed(1), tx:(base*0.68).toFixed(1), status:'UP'},
+    {name:'ether4-AP', kind:'ETHER', ip:'10.10.1.254', rx:(base*0.44).toFixed(1), tx:(base*0.40).toFixed(1), status:'UP'},
+    {name:'ether5', kind:'ETHER', ip:'—', rx:'0.0', tx:'0.0', status:'DISABLED'},
+  ];
+}
+
+const TENANTS = [
+  {id:'root', name:'RouterBridge Group',            code:'tn-root',      parent:null,  kind:'NHÀ CUNG CẤP', short:'NCC', role:'Toàn quyền',            quotaCap:12000, revenue:'1,24 tỷ'},
+  {id:'hado', name:'Công ty Viễn thông Hà Đô',       code:'tn-hado',      parent:'root',kind:'CÔNG TY',      short:'CTY', role:'Quản trị công ty',      quotaCap:2600,  revenue:'486 tr'},
+  {id:'hado-hn', name:'Chi nhánh Hà Nội',           code:'tn-hado-hn',   parent:'hado',kind:'CHI NHÁNH',    short:'CN',  role:'Vận hành',              quotaCap:1800,  revenue:'352 tr'},
+  {id:'hado-hp', name:'Chi nhánh Hải Phòng',        code:'tn-hado-hp',   parent:'hado',kind:'CHI NHÁNH',    short:'CN',  role:'Vận hành',              quotaCap:800,   revenue:'134 tr'},
+  {id:'nsg',  name:'Công ty NetSài Gòn',            code:'tn-nsg',       parent:'root',kind:'CÔNG TY',      short:'CTY', role:'Quản trị công ty',      quotaCap:3200,  revenue:'572 tr'},
+  {id:'nsg-q7', name:'Chi nhánh Quận 7',            code:'tn-nsg-q7',    parent:'nsg', kind:'CHI NHÁNH',    short:'CN',  role:'Vận hành',              quotaCap:1600,  revenue:'318 tr'},
+  {id:'nsg-bd', name:'Chi nhánh Bình Dương',        code:'tn-nsg-bd',    parent:'nsg', kind:'CHI NHÁNH',    short:'CN',  role:'Vận hành',              quotaCap:1600,  revenue:'254 tr'},
+  {id:'mtn',  name:'Đại lý Miền Trung – Tây Nam',   code:'tn-mtn',       parent:'root',kind:'ĐẠI LÝ',       short:'ĐL',  role:'Chỉ bán & gán gói',     quotaCap:1400,  revenue:'182 tr'},
+  {id:'mtn-dn', name:'Đại lý Đà Nẵng',              code:'tn-mtn-dn',    parent:'mtn', kind:'ĐẠI LÝ CON',   short:'ĐLC', role:'Chỉ bán & gán gói',     quotaCap:900,   revenue:'126 tr'},
+  {id:'mtn-ct', name:'Đại lý Cần Thơ',              code:'tn-mtn-ct',    parent:'mtn', kind:'ĐẠI LÝ CON',   short:'ĐLC', role:'Chỉ bán & gán gói',     quotaCap:500,   revenue:'56 tr'},
+];
+
+const ROUTER_TENANT = {
+  'HN-CORE-01':'hado-hn', 'HN-EDGE-04':'hado-hn', 'HP-EDGE-03':'hado-hp',
+  'HCM-CORE-02':'nsg-q7', 'HCM-EDGE-07':'nsg-bd', 'BD-EDGE-01':'nsg-bd',
+  'DN-CORE-01':'mtn-dn', 'CT-EDGE-02':'mtn-ct',
+};
+
+const TENANT_PROFILE = {
+  root:      {contact:'Trần Nam', phone:'0902 118 800', email:'ops@routerbridge.vn', address:'Toà RB Tower, Q.1, TP.HCM', taxId:'0312 456 789', since:'01/2022'},
+  hado:      {contact:'Lê Hà Đô', phone:'0913 224 511', email:'hado@vt-hado.vn', address:'12 Láng Hạ, Đống Đa, Hà Nội', taxId:'0107 552 214', since:'03/2022'},
+  'hado-hn': {contact:'Ngô Thu', phone:'0977 340 662', email:'ngothu@vt-hado.vn', address:'45 Cầu Giấy, Hà Nội', taxId:'—', since:'03/2022'},
+  'hado-hp': {contact:'Đinh Bảo', phone:'0966 552 018', email:'baodinh@vt-hado.vn', address:'22 Lê Chân, Hải Phòng', taxId:'—', since:'06/2023'},
+  nsg:       {contact:'Phan Kiên', phone:'0938 771 004', email:'kien.phan@netsg.vn', address:'88 Nguyễn Hữu Thọ, Q.7, TP.HCM', taxId:'0311 887 213', since:'05/2022'},
+  'nsg-q7':  {contact:'Đỗ Linh', phone:'0909 664 512', email:'linh.do@netsg.vn', address:'88 Nguyễn Hữu Thọ, Q.7, TP.HCM', taxId:'—', since:'05/2022'},
+  'nsg-bd':  {contact:'Vũ Trọng', phone:'0912 448 977', email:'trong.vu@netsg.vn', address:'Khu CN VSIP, Thuận An, Bình Dương', taxId:'—', since:'11/2022'},
+  mtn:       {contact:'Hồ Tấn', phone:'0905 331 890', email:'hotan@daily-mt.vn', address:'120 Điện Biên Phủ, Đà Nẵng', taxId:'0401 662 330', since:'09/2023'},
+  'mtn-dn':  {contact:'Hồ Tấn', phone:'0905 331 890', email:'hotan@daily-mt.vn', address:'120 Điện Biên Phủ, Đà Nẵng', taxId:'—', since:'09/2023'},
+  'mtn-ct':  {contact:'Bùi Mai', phone:'0939 220 145', email:'mai.bui@daily-mt.vn', address:'56 Trần Hưng Đạo, Cần Thơ', taxId:'—', since:'01/2024'},
+};
+
+const KIND_TONE = {
+  'NHÀ CUNG CẤP': ['#eef0f2','#3d454c','#3d454c'],
+  'CÔNG TY':      ['#e6f5f3','#0b5f56','#12a594'],
+  'CHI NHÁNH':    ['#eaf0f6','#33526f','#7f93a8'],
+  'ĐẠI LÝ':       ['#f3eee6','#7a5a1c','#b7791f'],
+  'ĐẠI LÝ CON':   ['#f7f3ec','#8a6a2c','#d3b17c'],
+};
+
+const ADMINS = [
+  {name:'Trần Nam',    tenant:'RouterBridge Group',          role:'SUPERADMIN', scope:'Toàn hệ thống',   mfa:'BẬT'},
+  {name:'Lê Hà Đô',    tenant:'Công ty Viễn thông Hà Đô',    role:'TENANT ADMIN', scope:'tn-hado/*',     mfa:'BẬT'},
+  {name:'Ngô Thu',     tenant:'Chi nhánh Hà Nội',            role:'OPERATOR',   scope:'tn-hado-hn',      mfa:'BẬT'},
+  {name:'Phan Kiên',   tenant:'Công ty NetSài Gòn',          role:'TENANT ADMIN', scope:'tn-nsg/*',      mfa:'TẮT'},
+  {name:'Đỗ Linh',     tenant:'Chi nhánh Quận 7',            role:'OPERATOR',   scope:'tn-nsg-q7',       mfa:'BẬT'},
+  {name:'Hồ Tấn',      tenant:'Đại lý Đà Nẵng',              role:'RESELLER',   scope:'tn-mtn-dn',       mfa:'TẮT'},
+  {name:'Bùi Mai',     tenant:'Đại lý Cần Thơ',              role:'RESELLER',   scope:'tn-mtn-ct',       mfa:'BẬT'},
+];
+
+const ROLE_TONE = {
+  'SUPERADMIN':   ['#eef0f2','#3d454c'],
+  'TENANT ADMIN': ['#e6f5f3','#0b5f56'],
+  'OPERATOR':     ['#eaf0f6','#33526f'],
+  'RESELLER':     ['#f3eee6','#7a5a1c'],
+};
+
+const _depthCache = {}, _descCache = {};
+function tDepth(id) {
+  if (_depthCache[id] !== undefined) return _depthCache[id];
+  let d = 0, t = TENANTS.find(x => x.id === id);
+  while (t && t.parent) { d++; t = TENANTS.find(x => x.id === t.parent); }
+  return _depthCache[id] = d;
+}
+function tDesc(id) {
+  if (_descCache[id]) return _descCache[id];
+  const out = [id]; let grew = true;
+  while (grew) { grew = false; TENANTS.forEach(t => { if (t.parent && out.includes(t.parent) && !out.includes(t.id)) { out.push(t.id); grew = true; } }); }
+  return _descCache[id] = out;
+}
+function tRouters(id) { const ids = tDesc(id); return ROUTERS.filter(r => ids.includes(ROUTER_TENANT[r.name])); }
+function rOnline(id) { return tRouters(id).reduce((a, r) => a + r.online, 0); }
+function subsOf(id) { return Math.round(rOnline(id) / 0.87); }
+function tUsers(id) { const names = tRouters(id).map(r => r.name); return USERS.filter(u => names.includes(u.router)); }
+
+const ZT_NETS = [
+  {name:'noc-backbone', nwid:'8056c2e21c000001', cidr:'10.147.20.0/24', tid:'root', access:'PRIVATE', tenant:'RouterBridge Group'},
+  {name:'hado-mgmt',    nwid:'8056c2e21c00a2f4', cidr:'10.147.21.0/24', tid:'hado', access:'PRIVATE', tenant:'Công ty Viễn thông Hà Đô'},
+  {name:'nsg-mgmt',     nwid:'8056c2e21c00b1d7', cidr:'10.147.22.0/24', tid:'nsg',  access:'PRIVATE', tenant:'Công ty NetSài Gòn'},
+  {name:'reseller-ro',  nwid:'8056c2e21c00c930', cidr:'10.147.23.0/24', tid:'mtn',  access:'PRIVATE', tenant:'Đại lý Miền Trung – Tây Nam'},
+];
+
+const ZT_MEMBERS = [
+  {name:'HN-CORE-01', addr:'a1b2c3d4e5', ip:'10.147.20.11', ver:'1.14.0', latency:'12 ms', role:'ROUTER', path:'DIRECT', auth:'ĐÃ DUYỆT', online:'ONLINE', net:0, tid:'hado-hn'},
+  {name:'HN-EDGE-04', addr:'b2c3d4e5f6', ip:'10.147.21.12', ver:'1.14.0', latency:'18 ms', role:'ROUTER', path:'DIRECT', auth:'ĐÃ DUYỆT', online:'ONLINE', net:1, tid:'hado-hn'},
+  {name:'HP-EDGE-03', addr:'a9b8c7d6e5', ip:'10.147.21.13', ver:'1.13.1', latency:'22 ms', role:'ROUTER', path:'DIRECT', auth:'CHỜ DUYỆT', online:'ONLINE', net:1, tid:'hado-hp'},
+  {name:'laptop-ngothu', addr:'0718293a4b', ip:'10.147.21.62', ver:'1.14.2', latency:'31 ms', role:'ADMIN', path:'DIRECT', auth:'ĐÃ DUYỆT', online:'ONLINE', net:1, tid:'hado-hn'},
+  {name:'HCM-CORE-02', addr:'c3d4e5f607', ip:'10.147.22.21', ver:'1.14.2', latency:'27 ms', role:'ROUTER', path:'DIRECT', auth:'ĐÃ DUYỆT', online:'ONLINE', net:2, tid:'nsg-q7'},
+  {name:'BD-EDGE-01', addr:'d1e2f3a4b5', ip:'10.147.22.22', ver:'1.14.0', latency:'24 ms', role:'ROUTER', path:'DIRECT', auth:'ĐÃ DUYỆT', online:'ONLINE', net:2, tid:'nsg-bd'},
+  {name:'laptop-dolinh', addr:'4b5c6d7e8f', ip:'10.147.22.63', ver:'1.14.2', latency:'29 ms', role:'ADMIN', path:'DIRECT', auth:'CHỜ DUYỆT', online:'OFFLINE', net:2, tid:'nsg-q7'},
+  {name:'DN-CORE-01', addr:'d4e5f60718', ip:'10.147.23.31', ver:'1.12.2', latency:'74 ms', role:'ROUTER', path:'RELAY', auth:'ĐÃ DUYỆT', online:'ONLINE', net:3, tid:'mtn-dn'},
+  {name:'CT-EDGE-02', addr:'e5f6071829', ip:'10.147.23.41', ver:'1.12.2', latency:'—', role:'ROUTER', path:'—', auth:'ĐÃ DUYỆT', online:'OFFLINE', net:3, tid:'mtn-ct'},
+  {name:'laptop-hotan', addr:'18293a4b5c', ip:'—', ver:'1.14.2', latency:'—', role:'RESELLER', path:'—', auth:'CHỜ DUYỆT', online:'OFFLINE', net:3, tid:'mtn-dn'},
+  {name:'noc-jump-01', addr:'f60718293a', ip:'10.147.20.5', ver:'1.14.2', latency:'4 ms', role:'NOC', path:'DIRECT', auth:'ĐÃ DUYỆT', online:'ONLINE', net:0, tid:'root'},
+  {name:'unknown-node', addr:'293a4b5c6d', ip:'—', ver:'1.10.6', latency:'—', role:'—', path:'—', auth:'TỪ CHỐI', online:'OFFLINE', net:0, tid:'root'},
+];
+
+function tPath(id) { const parts = []; let t = TENANTS.find(x => x.id === id); while (t) { parts.unshift(t.name); t = TENANTS.find(x => x.id === t.parent); } return parts.join(' / '); }
+
+const ST = {
+  'ONLINE':        ['#e6f5f3','#0b5f56'],
+  'HOẠT ĐỘNG':     ['#e6f5f3','#0b5f56'],
+  'TẢI CAO':        ['#fdf3e2','#8a5a11'],
+  'CẢNH BÁO':      ['#fdf3e2','#8a5a11'],
+  'GẦN HẾT QUOTA': ['#fdf3e2','#8a5a11'],
+  'SẮP HẾT HẠN':   ['#fdf3e2','#8a5a11'],
+  'MẤT KẾT NỐI':   ['#fdecec','#a52327'],
+  'MẤT TÍN HIỆU':  ['#fdecec','#a52327'],
+  'TẠM NGƯNG':     ['#eef0f2','#5a636b'],
+};
+
+function pts(seed, amp, base) {
+  const out = [];
+  for (let i = 0; i <= 48; i++) {
+    const t = i / 48;
+    const v = Math.sin(t * 7.1 + seed) * .38 + Math.sin(t * 2.3 + seed * 1.7) * .42 + Math.sin(t * 17 + seed) * .12;
+    out.push((t * 1000).toFixed(1) + ',' + (base - (v + 1) / 2 * amp).toFixed(1));
+  }
+  return out.join(' ');
+}
+
+class Component extends DCLogic {
+  state = {
+    screen: 'overview',
+    sel: {2:true, 4:true, 8:true},
+    pkg: 1,
+    termUnit: 'Tháng',
+    term: '1 tháng',
+    form: {name:'Home 60M', down:'60', up:'30', quota:'400 GB', dev:'4', price:'245000'},
+    routerFilter: 'Tất cả',
+    userTab: 'Hoạt động',
+    range: '30 ngày',
+    scope: 'root',
+    scopeOpen: false,
+    detailRouter: 'HCM-CORE-02',
+    tenantSel: 'hado',
+    assignRouter: null,
+    invoiceFilter: 'Tất cả',
+    ztTab: 'Thành viên',
+    detailUser: 'nguyenvana',
+    importOpen: false,
+    addRouterOpen: false,
+    newRouterTenant: 'root',
+    addUserOpen: false,
+    newUserType: 'PPPOE',
+    tenantSearch: '',
+    stoppedRouters: {},
+    userPage: 1,
+    routerPage: 1,
+    topupExtra: 0,
+    topupMsg: '',
+    pendingTopup: null,
+    radiusTab: 'Client NAS',
+    ztNet: 0,
+    userFilter: 'Tất cả',
+    applied: false,
+  };
+
+  nav(s) { return () => this.setState({screen: s, applied: false}); }
+
+  openRouterDetail(name) { return () => this.setState({screen: 'routerdetail', detailRouter: name}); }
+
+  openUserDetail(name) { return () => this.setState({screen: 'userdetail', detailUser: name}); }
+
+  userDetailVals() {
+    const s = this.state;
+    const u = USERS.find(x => x.name === s.detailUser) || USERS[0];
+    const pk = PACKAGES.find(p => p.name === u.pkg) || PACKAGES[0];
+    const st = ST[u.status] || ['#eef0f2','#5a636b'];
+    const pct = u.cap ? Math.min(100, u.used / u.cap * 100) : Math.min(100, u.used / 120);
+    const urgent = ['SẮP HẾT HẠN','TẠM NGƯNG'].includes(u.status);
+    const daily = Array.from({length:14}, (_,i) => {
+      const v = Math.max(4, (u.used / 14) * (0.6 + Math.sin(i * 1.3) * 0.4 + Math.random() * 0.3));
+      return v;
+    });
+    const maxD = Math.max(...daily, 1);
+    return {
+      uName: u.name, uMac: u.mac, uRouter: u.router, uType: u.type,
+      uStatus: u.status, uStBg: st[0], uStFg: st[1],
+      uPkg: u.pkg, uRate: pk.rate,
+      uQuotaUsed: u.cap ? u.used + ' GB' : Math.round(u.used).toLocaleString('vi-VN') + ' GB',
+      uQuotaCap: u.cap ? 'GIỚI HẠN ' + u.cap + ' GB' : 'KHÔNG GIỚI HẠN',
+      uQuotaPct: pct.toFixed(0) + '%',
+      uQuotaColor: u.cap && pct > 85 ? '#c0292d' : pct > 70 ? '#b7791f' : '#12a594',
+      uQuotaNote: u.cap ? 'Còn lại ' + Math.max(0, (u.cap - u.used + s.topupExtra)).toFixed(1) + ' GB trước khi hết quota' : 'Trung bình ' + (u.used/30).toFixed(1) + ' GB/ngày trong kỳ này',
+      uCanTopup: !!u.cap,
+      uTopupMsg: s.topupMsg,
+      uTopups: [
+        {gb:5, price:'25.000đ'}, {gb:10, price:'45.000đ'}, {gb:20, price:'80.000đ'},
+      ].map(t => ({
+        label:'+' + t.gb + ' GB · ' + t.price,
+        border:'#dfe3e6', bg:'#fff', fg:'#4b545c',
+        buy: () => this.setState({pendingTopup: {gb: t.gb, price: t.price, user: u.name}, topupMsg: ''}),
+      })),
+      isTopupOpen: !!s.pendingTopup,
+      topupPending: s.pendingTopup,
+      cancelTopup: () => this.setState({pendingTopup: null}),
+      confirmTopup: () => this.setState(st => {
+        if (!st.pendingTopup) return null;
+        return {topupExtra: st.topupExtra + st.pendingTopup.gb, topupMsg: 'Đã thanh toán & cộng ' + st.pendingTopup.gb + ' GB cho ' + st.pendingTopup.user, pendingTopup: null};
+      }),
+      uExpiry: u.expiry, uExpColor: urgent ? '#c0292d' : '#16191c',
+      uPrice: pk.price + ' đ',
+      uDaily: daily.map((v,i) => ({d: 'N' + (14-i), h: (v / maxD * 100).toFixed(0) + '%'})),
+      uSitesTotal: 'TỔNG ' + Math.round(u.used * 0.71).toLocaleString('vi-VN') + ' GB',
+      uSites: [
+        {domain:'youtube.com', cat:'Video', share:.34, tone:'#c0292d'},
+        {domain:'facebook.com', cat:'Mạng xã hội', share:.19, tone:'#33526f'},
+        {domain:'tiktok.com', cat:'Video', share:.15, tone:'#c0292d'},
+        {domain:'zalo.me', cat:'Nhắn tin', share:.09, tone:'#0f8175'},
+        {domain:'shopee.vn', cat:'Mua sắm', share:.08, tone:'#b7791f'},
+        {domain:'windowsupdate.com', cat:'Hệ thống', share:.06, tone:'#5a636b'},
+        {domain:'netflix.com', cat:'Video', share:.05, tone:'#c0292d'},
+        {domain:'khác', cat:'—', share:.04, tone:'#9aa2a9'},
+      ].map(w => ({domain: w.domain, cat: w.cat, pct: (w.share*100).toFixed(0) + '%', tone: w.tone, data: (u.used * 0.71 * w.share).toFixed(1) + ' GB'})),
+      uPayCount: 5 + (s.topupExtra > 0 ? 1 : 0),
+      uPayments: [
+        {t:'02/08/2026', desc:'Gia hạn gói ' + u.pkg, amount: pk.price + ' đ', status:'THÀNH CÔNG'},
+        {t:'15/07/2026', desc:'Mua thêm +10 GB', amount:'45.000 đ', status:'THÀNH CÔNG'},
+        {t:'02/07/2026', desc:'Gia hạn gói ' + u.pkg, amount: pk.price + ' đ', status:'THÀNH CÔNG'},
+        {t:'19/06/2026', desc:'Mua thêm +5 GB', amount:'25.000 đ', status:'THẤT BẠI'},
+        {t:'02/06/2026', desc:'Gia hạn gói ' + u.pkg, amount: pk.price + ' đ', status:'THÀNH CÔNG'},
+      ].concat(s.topupExtra > 0 ? [{t:'Hôm nay', desc:'Mua thêm data', amount: s.topupMsg ? '—' : '', status:'THÀNH CÔNG'}] : [])
+        .filter(p => p.desc !== 'Mua thêm data' || s.topupMsg)
+        .map(p => ({t: p.t, desc: p.desc, amount: p.amount || '—', status: p.status, stBg: p.status === 'THÀNH CÔNG' ? '#e6f5f3' : '#fdecec', stFg: p.status === 'THÀNH CÔNG' ? '#0b5f56' : '#a52327'})),
+      uCats: [
+        {name:'Video streaming', pct:54, tone:'#c0292d'},
+        {name:'Mạng xã hội', pct:19, tone:'#33526f'},
+        {name:'Mua sắm', pct:8, tone:'#b7791f'},
+        {name:'Nhắn tin / gọi thoại', pct:9, tone:'#0f8175'},
+        {name:'Hệ thống / cập nhật', pct:6, tone:'#5a636b'},
+        {name:'Khác', pct:4, tone:'#9aa2a9'},
+      ].map(c => ({name: c.name, pct: c.pct + '%', tone: c.tone})),
+      uSessions: Array.from({length:5}, (_,i) => ({
+        t: ['Hôm nay 08:1' + i, 'Hôm qua 21:0' + i, 'Hôm qua 09:4' + i, '2 ngày trước 18:2' + i, '3 ngày trước 07:5' + i][i],
+        dur: ['02:14','04:08','01:32','05:41','03:07'][i],
+        data: (u.used / 8 * (1 + i * 0.2)).toFixed(1) + ' GB',
+        nas: u.router,
+      })),
+    };
+  }
+
+  navItem(id, label, badge) {
+    const on = this.state.screen === id;
+    return {label, badge, go: this.nav(id), bg: on ? 'rgba(18,165,148,.16)' : 'transparent', fg: on ? '#5fded0' : 'rgba(255,255,255,.66)'};
+  }
+
+  chip(label, active, onPick) {
+    return {label, go: onPick, bg: active ? '#12a594' : '#fff', fg: active ? '#04211e' : '#4b545c', border: active ? '#0f8175' : '#dfe3e6'};
+  }
+
+  scopeIds() { return tDesc(this.state.scope || 'root'); }
+  inScope(routerName) { return this.scopeIds().includes(ROUTER_TENANT[routerName]); }
+
+  pageChip(n, active) { return {n, go: () => this.setState({userPage: n}), border: active ? '#0f8175' : '#dfe3e6', bg: active ? '#12a594' : '#fff', fg: active ? '#04211e' : '#16191c'}; }
+  routerPageChip(n, active) { return {n, go: () => this.setState({routerPage: n}), border: active ? '#0f8175' : '#dfe3e6', bg: active ? '#12a594' : '#fff', fg: active ? '#04211e' : '#16191c'}; }
+
+  visibleUsers() {
+    const f = this.state.userFilter;
+    const tab = this.state.userTab;
+    const inactive = ['TẠM NGƯNG','MẤT TÍN HIỆU'];
+    let list = USERS.filter(u => this.inScope(u.router));
+    if (tab === 'Hoạt động') list = list.filter(u => !inactive.includes(u.status));
+    if (tab === 'Ngưng hoạt động') list = list.filter(u => inactive.includes(u.status));
+    if (f === 'PPPoE') list = list.filter(u => u.type === 'PPPOE');
+    if (f === 'Hotspot') list = list.filter(u => u.type === 'HOTSPOT');
+    if (f === 'Cần xử lý') list = list.filter(u => !['HOẠT ĐỘNG','ONLINE'].includes(u.status));
+    return list;
+  }
+
+  visibleRouters() {
+    const f = this.state.routerFilter;
+    let list = ROUTERS.filter(r => this.inScope(r.name));
+    if (f === 'Online') list = list.filter(r => r.status === 'ONLINE');
+    if (f === 'Có vấn đề') list = list.filter(r => r.status !== 'ONLINE');
+    if (f === 'Tải cao') list = list.filter(r => r.cpu >= 70);
+    return list;
+  }
+
+  detailVals() {
+    const s = this.state;
+    const r = ROUTERS.find(x => x.name === s.detailRouter) || ROUTERS[0];
+    const st = ST[r.status] || ['#eef0f2','#5a636b'];
+    const cpuColor = c => c >= 85 ? '#c0292d' : c >= 70 ? '#8a5a11' : '#4b545c';
+    const ifs = ifacesFor(r);
+    const wan = ifs.filter(i => i.kind === 'WAN');
+    const ether = ifs.filter(i => i.kind === 'ETHER');
+    const routerUsers = USERS.filter(u => u.router === r.name);
+    const dayTotal = (r.online * 0.62).toFixed(0);
+
+    return {
+      dRouter: r, dName: r.name, dIp: r.ip, dSite: r.site, dModel: r.model, dRos: r.ros, dUptime: r.uptime,
+      dCpu: r.cpu, dCpuColor: cpuColor(r.cpu), dRam: r.ram, dOnline: r.online.toLocaleString('vi-VN'),
+      dStatus: r.status, dStBg: st[0], dStFg: st[1],
+      dCpuChart: pts(r.cpu * 0.31, 44, 60), dRamChart: pts(r.ram * 0.17 + 2, 44, 60),
+
+      wanIfaces: wan.map(w => ({
+        name: w.name, ip: w.ip, rx: w.rx, tx: w.tx, status: w.status,
+        stBg: w.status === 'UP' ? '#e6f5f3' : w.status === 'STANDBY' ? '#fdf3e2' : '#fdecec',
+        stFg: w.status === 'UP' ? '#0b5f56' : w.status === 'STANDBY' ? '#8a5a11' : '#a52327',
+        line: pts(parseFloat(w.rx) + 1, 30, 40),
+      })),
+      etherIfaces: ether.map(e => ({
+        name: e.name, ip: e.ip, rx: e.rx, tx: e.tx, status: e.status,
+        stBg: e.status === 'UP' ? '#e6f5f3' : '#eef0f2',
+        stFg: e.status === 'UP' ? '#0b5f56' : '#8a8f95',
+        pct: Math.min(100, parseFloat(e.rx) / 3).toFixed(0) + '%',
+      })),
+
+      dayTotal: dayTotal + ' GB',
+      dataArea: '0,60 ' + pts(r.cpu * 0.19 + 1, 46, 60) + ' 1000,60',
+      dataLine: pts(r.cpu * 0.19 + 1, 46, 60),
+      dataUsers: routerUsers.slice().sort((a,b) => b.used - a.used).slice(0,6).map(u => ({
+        name: u.name, pkg: u.pkg, used: Math.round(u.used).toLocaleString('vi-VN') + ' GB',
+        pct: Math.min(100, u.used / 12).toFixed(0) + '%',
+        tone: u.used > 800 ? '#c0292d' : u.used > 200 ? '#b7791f' : '#12a594',
+      })),
+      dataUserCount: routerUsers.length,
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const p = this.props;
+    const showChart = p.showTrafficChart ?? true;
+    const pkg = PACKAGES[s.pkg];
+    const scopeT = TENANTS.find(t => t.id === (s.scope || 'root')) || TENANTS[0];
+    let selT = TENANTS.find(t => t.id === s.tenantSel) || TENANTS[1];
+    if (!tDesc(s.scope || 'root').includes(selT.id)) selT = scopeT;
+    const sRouters = tRouters(s.scope || 'root');
+    const sUsers = tUsers(s.scope || 'root');
+    const sNames = sRouters.map(r => r.name);
+    const sUp = sRouters.filter(r => r.status !== 'MẤT KẾT NỐI');
+    const rootSubs = subsOf('root');
+    const subs = subsOf(s.scope || 'root');
+    const onlineUsers = rOnline(s.scope || 'root');
+    const scaleSubs = n => Math.round(n * subs / rootSubs);
+    const scopeIds = tDesc(s.scope || 'root');
+    const baseDepth = tDepth(s.scope || 'root');
+    const scopedNames = TENANTS.filter(t => scopeIds.includes(t.id)).map(t => t.name);
+    const scopedAdmins = ADMINS.filter(a => scopedNames.includes(a.tenant));
+    const ztPool = ZT_NETS.map((n, i) => i).filter(i => scopeIds.includes(ZT_NETS[i].tid) || tDesc(ZT_NETS[i].tid).includes(s.scope || 'root'));
+    const ztIdx = ztPool.includes(s.ztNet) ? s.ztNet : (ztPool[0] !== undefined ? ztPool[0] : 0);
+    const ztMem = ZT_MEMBERS.filter(m => m.net === ztIdx && scopeIds.includes(m.tid));
+    const ztPending = ztMem.filter(m => m.auth === 'CHỜ DUYỆT');
+    const selIdx = Object.keys(s.sel).filter(k => s.sel[k]).map(Number);
+    const selCount = selIdx.length;
+
+    const titles = {
+      overview:  ['HỆ THỐNG / TỔNG QUAN', 'Trung tâm điều hành'],
+      routers:   ['HỆ THỐNG / THIẾT BỊ', 'Thiết bị MikroTik'],
+      users:     ['THUÊ BAO / NGƯỜI DÙNG', 'Quản lý người dùng'],
+      packages:  ['THUÊ BAO / GÓI CƯỚC', 'Gói cước & profile'],
+      assign:    ['THUÊ BAO / GÁN GÓI', 'Gán gói hàng loạt'],
+      analytics: ['PHÂN TÍCH / NGƯỜI DÙNG', 'Phân tích dữ liệu người dùng'],
+      tenants:   ['TỔ CHỨC / PHÂN CẤP', 'Tenant & phân cấp quản lý'],
+      radius:    ['THUÊ BAO / RADIUS', 'RADIUS · AAA & accounting'],
+      zerotier:  ['THUÊ BAO / VPN', 'VPN ZeroTier · mạng ảo'],
+      routerdetail: ['HỆ THỐNG / THIẾT BỊ / CHI TIẾT', (ROUTERS.find(r => r.name === s.detailRouter) || {}).name || ''],
+      userdetail: ['THUÊ BAO / NGƯỜI DÙNG / CHI TIẾT', s.detailUser || ''],
+      invoices: ['TỔ CHỨC / HOÁ ĐƠN', 'Hoá đơn & thanh toán tenant'],
+    };
+
+    const cpuColor = c => c >= 85 ? '#c0292d' : c >= 70 ? '#8a5a11' : '#4b545c';
+
+    const uAll = this.visibleUsers();
+    const uPages = Math.max(1, Math.ceil(uAll.length / 15));
+    const uPage = Math.min(Math.max(1, s.userPage), uPages);
+    const users = uAll.slice((uPage-1)*15, uPage*15).map(u => {
+      const i = USERS.indexOf(u);
+      const on = !!s.sel[i];
+      const st = ST[u.status] || ['#eef0f2','#5a636b'];
+      const pct = u.cap ? Math.min(100, u.used / u.cap * 100) : Math.min(100, u.used / 120);
+      const qColor = u.cap && pct > 85 ? '#c0292d' : pct > 70 ? '#b7791f' : '#12a594';
+      const urgent = ['SẮP HẾT HẠN','TẠM NGƯNG'].includes(u.status);
+      return {
+        name: u.name, mac: u.mac, type: u.type, router: u.router, pkg: u.pkg,
+        quota: u.cap ? u.used + ' / ' + u.cap + ' GB' : u.used.toLocaleString('vi-VN') + ' GB',
+        quotaPct: pct.toFixed(0) + '%', quotaColor: qColor,
+        expiry: u.expiry, expColor: urgent ? '#c0292d' : '#4b545c',
+        status: u.status, stBg: st[0], stFg: st[1],
+        typeBg: u.type === 'PPPOE' ? '#eaf0f6' : '#f3eee6',
+        typeFg: u.type === 'PPPOE' ? '#33526f' : '#7a5a1c',
+        tick: on ? '✓' : '', rowBg: on ? '#f2faf9' : '#fff',
+        boxBorder: on ? '#0f8175' : '#c4cacf', boxBg: on ? '#12a594' : '#fff',
+        nextPkg: on ? pkg.name : '—', nextColor: on ? '#0f8175' : '#c4cacf',
+        toggle: e => { e.stopPropagation(); this.setState(st2 => ({sel: Object.assign({}, st2.sel, {[i]: !st2.sel[i]}), applied: false})); },
+        open: this.openUserDetail(u.name),
+        recharge: () => this.setState({pendingTopup: null}) && this.openUserDetail(u.name)(),
+        topup: () => this.openUserDetail(u.name)(),
+        disable: () => {},
+        disableLabel: u.status === 'TẠM NGƯNG' ? 'Bật lại' : 'Tạm ngưng',
+        disableFg: u.status === 'TẠM NGƯNG' ? '#0b5f56' : '#a52327',
+      };
+    });
+
+    const packages = PACKAGES.map((pk, i) => {
+      const on = s.pkg === i;
+      return Object.assign({}, pk, {
+        pick: () => this.setState({pkg: i, form: {name: pk.name, down: pk.rate.split('/')[0].replace('M',''), up: pk.rate.split('/')[1].replace('M',''), quota: pk.quota, dev: pk.devices, price: pk.price.replace(/\./g,'')}, applied: false}),
+        rowBg: on ? '#f2faf9' : '#fff',
+        cardBg: on ? '#f2faf9' : '#fff',
+        cardBorder: on ? '#12a594' : '#dfe3e6',
+        radioBorder: on ? '#0f8175' : '#c4cacf',
+        radioBg: on ? '#12a594' : '#fff',
+        radioRing: on ? 'inset 0 0 0 2px #fff' : 'none',
+      });
+    });
+
+    const f = s.form;
+    const cli = '/ip hotspot user profile add name="' + f.name + '" rate-limit=' + f.down + 'M/' + f.up + 'M shared-users=' + f.dev;
+
+    return {
+      crumb: titles[s.screen][0],
+      title: titles[s.screen][1],
+      isOverview: s.screen === 'overview',
+      isRouters: s.screen === 'routers',
+      isUsers: s.screen === 'users',
+      isPackages: s.screen === 'packages',
+      isAssign: s.screen === 'assign',
+      showChart,
+
+      navOps: [this.navItem('overview','Tổng quan'), this.navItem('routers','Thiết bị MikroTik','2')],
+      navCust: [this.navItem('users','Người dùng'), this.navItem('analytics','Phân tích dữ liệu')],
+      navSub: [this.navItem('packages','Gói cước'), this.navItem('assign','Gán gói hàng loạt'), this.navItem('radius','RADIUS / AAA'), this.navItem('zerotier','VPN ZeroTier')],
+      navOrg: [this.navItem('tenants','Tenant & phân cấp'), this.navItem('invoices','Hoá đơn')],
+      isInvoices: s.screen === 'invoices',
+      isAnalytics: s.screen === 'analytics',
+      isTenants: s.screen === 'tenants',
+      isRadius: s.screen === 'radius',
+      isZerotier: s.screen === 'zerotier',
+
+      scopeOpen: !!s.scopeOpen,
+      scopeName: scopeT.name,
+      scopeKind: scopeT.kind,
+      scopeBg: s.scope === 'root' ? '#fff' : '#f2faf9',
+      scopeBorder: s.scope === 'root' ? '#dfe3e6' : '#12a594',
+      toggleScope: () => this.setState(st => ({scopeOpen: !st.scopeOpen})),
+      scopeList: TENANTS.map(t => {
+        const kt = KIND_TONE[t.kind];
+        return {
+          name: t.name, kindShort: t.short, kindBg: kt[0], kindFg: kt[1],
+          indent: (8 + tDepth(t.id) * 14) + 'px',
+          scopeBg: s.scope === t.id ? '#e6f5f3' : 'transparent',
+          userCount: subsOf(t.id).toLocaleString('vi-VN'),
+          pickScope: () => this.setState({scope: t.id, tenantSel: t.id, scopeOpen: false, sel: {}, applied: false}),
+        };
+      }),
+
+      tenantCount: scopeIds.length,
+      tenantRows: TENANTS.filter(t => scopeIds.includes(t.id)).map(t => {
+        const kt = KIND_TONE[t.kind];
+        const d = tDepth(t.id);
+        const nUsers = subsOf(t.id);
+        const nRouters = tRouters(t.id).length;
+        const pct = Math.min(100, nUsers / t.quotaCap * 100);
+        return {
+          name: t.name, code: t.code, kind: t.kind, kindBg: kt[0], kindFg: kt[1], tone: kt[2],
+          indent: (Math.max(0, d - baseDepth) * 18) + 'px', nameFont: d === baseDepth ? '600 12.5px' : '500 12px',
+          routers: nRouters, users: nUsers.toLocaleString('vi-VN'),
+          quotaLabel: nUsers.toLocaleString('vi-VN') + ' / ' + t.quotaCap.toLocaleString('vi-VN'),
+          quotaPct: pct.toFixed(0) + '%',
+          quotaColor: pct > 85 ? '#c0292d' : pct > 70 ? '#b7791f' : '#12a594',
+          revenue: t.revenue, role: t.role,
+          rowBg: s.tenantSel === t.id ? '#f2faf9' : '#fff',
+          select: () => this.setState({tenantSel: t.id}),
+        };
+      }),
+
+      adminCount: scopedAdmins.length,
+      admins: scopedAdmins.map(a => {
+        const rt = ROLE_TONE[a.role];
+        return Object.assign({}, a, {roleBg: rt[0], roleFg: rt[1], mfaColor: a.mfa === 'BẬT' ? '#0b5f56' : '#c0292d'});
+      }),
+
+      selTenantName: selT.name,
+      selTenantPath: tPath(selT.id),
+      selTenantStats: [
+        {k:'CẤP', v: selT.kind, color:'#16191c'},
+        {k:'TỔ CHỨC CON', v: (tDesc(selT.id).length - 1) + ' node', color:'#16191c'},
+        {k:'ROUTER ĐƯỢC CẤP', v: tRouters(selT.id).length + ' thiết bị', color:'#16191c'},
+        {k:'THUÊ BAO', v: subsOf(selT.id).toLocaleString('vi-VN'), color:'#0f8175'},
+        {k:'HẠN MỨC USER', v: selT.quotaCap.toLocaleString('vi-VN'), color:'#16191c'},
+        {k:'DOANH THU / THÁNG', v: selT.revenue, color:'#16191c'},
+      ],
+      applyScopeToSel: () => this.setState({scope: selT.id, sel: {}, applied: false}),
+      selTenantProfile: (() => {
+        const p = TENANT_PROFILE[selT.id] || {};
+        return [
+          {k:'NGƯỜI ĐẠI DIỆN', v: p.contact || '—'},
+          {k:'ĐIỆN THOẠI', v: p.phone || '—'},
+          {k:'EMAIL', v: p.email || '—'},
+          {k:'ĐỊA CHỈ', v: p.address || '—'},
+          {k:'MÃ SỐ THUẾ', v: p.taxId || '—'},
+          {k:'KHÁCH HÀNG TỪ', v: p.since || '—'},
+        ];
+      })(),
+
+      invoiceFilters: ['Tất cả','Chưa thanh toán','Đã thanh toán','Quá hạn'].map(l => this.chip(l, s.invoiceFilter === l, () => this.setState({invoiceFilter: l}))),
+      invoiceRows: (() => {
+        const rows = TENANTS.filter(t => scopeIds.includes(t.id) && t.parent !== null).map((t, i) => {
+          const amounts = [12400000, 4860000, 3520000, 1340000, 5720000, 3180000, 2540000, 1820000, 1260000];
+          const statuses = ['ĐÃ THANH TOÁN','ĐÃ THANH TOÁN','CHƯA THANH TOÁN','QUÁ HẠN','ĐÃ THANH TOÁN','CHƯA THANH TOÁN','ĐÃ THANH TOÁN','QUÁ HẠN','CHƯA THANH TOÁN'];
+          const idx = TENANTS.findIndex(x => x.id === t.id);
+          return {
+            id:'INV-2026-08-' + (100 + idx), tenant: t.name, period:'08/2026',
+            amount: parseInt(t.revenue.replace(/[^\d]/g,'') || '0') ? t.revenue : (amounts[idx % amounts.length] / 1000000).toFixed(2) + ' tr',
+            status: statuses[idx % statuses.length],
+            due: statuses[idx % statuses.length] === 'QUÁ HẠN' ? '20/08/2026' : '05/09/2026',
+          };
+        });
+        const map = {'ĐÃ THANH TOÁN':['#e6f5f3','#0b5f56'], 'CHƯA THANH TOÁN':['#fdf3e2','#8a5a11'], 'QUÁ HẠN':['#fdecec','#a52327']};
+        return rows.filter(r => s.invoiceFilter === 'Tất cả'
+          || (s.invoiceFilter === 'Chưa thanh toán' && r.status === 'CHƯA THANH TOÁN')
+          || (s.invoiceFilter === 'Đã thanh toán' && r.status === 'ĐÃ THANH TOÁN')
+          || (s.invoiceFilter === 'Quá hạn' && r.status === 'QUÁ HẠN'))
+          .map(r => ({id: r.id, tenant: r.tenant, period: r.period, amount: r.amount, due: r.due, status: r.status, stBg: map[r.status][0], stFg: map[r.status][1]}));
+      })(),
+      invoiceKpis: [
+        {label:'TỔNG HOÁ ĐƠN THÁNG', value: scopeT.revenue, delta:'08/2026', deltaColor:'#7c858d'},
+        {label:'ĐÃ THU', value: (parseFloat(scopeT.revenue) * 0.68).toFixed(2) + (scopeT.revenue.includes('tỷ') ? ' tỷ' : ' tr'), delta:'68% hoá đơn', deltaColor:'#0b5f56'},
+        {label:'CHƯA THU', value: (parseFloat(scopeT.revenue) * 0.22).toFixed(2) + (scopeT.revenue.includes('tỷ') ? ' tỷ' : ' tr'), delta:'22% hoá đơn', deltaColor:'#8a5a11'},
+        {label:'QUÁ HẠN', value: (parseFloat(scopeT.revenue) * 0.10).toFixed(2) + (scopeT.revenue.includes('tỷ') ? ' tỷ' : ' tr'), delta:'Cần nhắc thanh toán', deltaColor:'#c0292d'},
+      ],
+      inheritRows: PACKAGES.map((pk, i) => {
+        const own = selT.parent === null || i >= 3;
+        return {
+          name: pk.name, tone: pk.tone,
+          note: own ? 'Định nghĩa tại ' + selT.code : 'Kế thừa từ ' + (TENANTS.find(x => x.id === selT.parent) || selT).code,
+          tag: own ? 'RIÊNG' : 'KẾ THỪA',
+          tagBg: own ? '#e6f5f3' : '#eef0f2', tagFg: own ? '#0b5f56' : '#5a636b',
+          border: own ? '#cbe8e3' : '#eaedef', bg: own ? '#f7fcfb' : '#fff',
+        };
+      }),
+
+      perms: [
+        {label:'Tạo & sửa gói cước riêng', on: selT.kind !== 'ĐẠI LÝ CON'},
+        {label:'Gán gói cho thuê bao', on: true},
+        {label:'Thêm / xoá thiết bị MikroTik', on: ['NHÀ CUNG CẤP','CÔNG TY'].includes(selT.kind)},
+        {label:'Xem cấu hình RouterOS thô', on: selT.kind !== 'ĐẠI LÝ' && selT.kind !== 'ĐẠI LÝ CON'},
+        {label:'Tạo tổ chức con', on: selT.kind !== 'CHI NHÁNH' && selT.kind !== 'ĐẠI LÝ CON'},
+        {label:'Xem doanh thu toàn nhóm', on: selT.parent === null},
+      ].map(p => ({
+        label: p.label, tick: p.on ? '✓' : '',
+        border: p.on ? '#0f8175' : '#c4cacf', bg: p.on ? '#12a594' : '#fff',
+        fg: p.on ? '#16191c' : '#9aa2a9',
+      })),
+
+      radiusTabs: ['Client NAS','Session đang mở','Accounting','Chính sách'].map(l => this.chip(l, s.radiusTab === l, () => this.setState({radiusTab: l}))),
+      radiusTab: s.radiusTab,
+      isRadTab1: s.radiusTab === 'Client NAS',
+      isRadTab2: s.radiusTab === 'Session đang mở',
+      isRadTab3: s.radiusTab === 'Accounting',
+      isRadTab4: s.radiusTab === 'Chính sách',
+      radiusKpis: [
+        {label:'AUTH / PHÚT', value: scaleSubs(1284).toLocaleString('vi-VN'), delta:'accept 98,6%', deltaColor:'#0b5f56'},
+        {label:'REJECT 1H', value: scaleSubs(412).toLocaleString('vi-VN'), delta:'+' + scaleSubs(38) + ' so với giờ trước', deltaColor:'#8a5a11'},
+        {label:'SESSION ĐANG MỞ', value: onlineUsers.toLocaleString('vi-VN'), delta:'trung bình 41 phút', deltaColor:'#7c858d'},
+        {label:'NAS ĐANG BÁO CÁO', value: sUp.length + ' / ' + sRouters.length, delta:'accounting interim 5 phút', deltaColor: sUp.length < sRouters.length ? '#8a5a11' : '#0b5f56'},
+        {label:'CoA / DM ĐÃ GỬI', value: scaleSubs(96).toLocaleString('vi-VN'), delta:'áp gói tức thì', deltaColor:'#0b5f56'},
+      ],
+      nasRows: tRouters(s.scope).map((r, i) => ({
+        name: r.name, ip: r.ip, tenant: (TENANTS.find(t => t.id === ROUTER_TENANT[r.name]) || {}).name,
+        secretMask: '••••••••' + (11 + i),
+        auth: (1812).toString(), acct: (1813).toString(),
+        coa: i % 3 === 0 ? 'BẬT' : 'BẬT',
+        coaColor: '#0b5f56',
+        sessions: r.online.toLocaleString('vi-VN'),
+        state: r.status === 'MẤT KẾT NỐI' ? 'KHÔNG PHẢN HỒI' : 'ĐANG BÁO CÁO',
+        stBg: r.status === 'MẤT KẾT NỐI' ? '#fdecec' : '#e6f5f3',
+        stFg: r.status === 'MẤT KẾT NỐI' ? '#a52327' : '#0b5f56',
+      })),
+      radSessions: this.visibleUsers().slice(0, 8).map((u, i) => ({
+        user: u.name, nas: u.router, ip: '10.' + (60 + i) + '.12.' + (14 + i * 3),
+        started: ['21:04','20:58','20:41','20:22','19:57','19:31','18:48','18:12'][i],
+        dur: ['01:12','01:18','01:35','01:54','02:19','02:45','03:28','04:04'][i],
+        inOut: (14 + i * 7) + ' / ' + (3 + i * 2) + ' GB',
+        pkg: u.pkg,
+        actionColor: '#c0292d',
+      })),
+      radLogs: [
+        {t:'21:07:12', k:'ACCESS-ACCEPT', u:'nguyenvana', nas:'HN-CORE-01', note:'profile=pkg-home-60 · Framed-Pool=hado-hn', color:'#0b5f56'},
+        {t:'21:07:09', k:'ACCESS-REJECT', u:'hs-05011', nas:'HN-EDGE-04', note:'Sai mật khẩu (lần 3) · khoá 5 phút', color:'#c0292d'},
+        {t:'21:06:55', k:'CoA-ACK', u:'lequangc', nas:'DN-CORE-01', note:'rate-limit 150M/75M áp ngay', color:'#0f8175'},
+        {t:'21:06:41', k:'ACCT-INTERIM', u:'cty-minhphat', nas:'HCM-CORE-02', note:'in=812GB out=204GB', color:'#5a636b'},
+        {t:'21:06:20', k:'DISCONNECT-REQ', u:'hoangvane', nas:'HP-EDGE-03', note:'Tạm ngưng do quá hạn', color:'#8a5a11'},
+        {t:'21:05:58', k:'ACCESS-REJECT', u:'unknown@hado', nas:'HN-CORE-01', note:'Không tồn tại trong tenant', color:'#c0292d'},
+      ],
+      radPolicies: [
+        {name:'Ràng buộc tenant', v:'Realm @tenant-code bắt buộc', note:'User chỉ auth được trong NAS thuộc tenant của mình', on:true},
+        {name:'Đồng thời tối đa', v:'Theo shared-users của gói', note:'Vượt hạn mức → Access-Reject 4-01', on:true},
+        {name:'Quota cứng', v:'Ngắt khi hết dung lượng', note:'Gửi Disconnect-Request tới NAS', on:true},
+        {name:'CoA khi đổi gói', v:'Áp tức thì, không cần reconnect', note:'Dùng cho luồng Gán gói hàng loạt', on:true},
+        {name:'Fallback khi RADIUS chết', v:'Cho phép local RouterOS 15 phút', note:'Tránh sập toàn mạng khi mất AAA', on:true},
+        {name:'MAC binding', v:'Chỉ áp cho gói Hotspot', note:'Tự huỷ sau khi hết hạn phiên', on:false},
+      ].map(p => ({
+        name: p.name, v: p.v, note: p.note, tick: p.on ? '✓' : '',
+        border: p.on ? '#0f8175' : '#c4cacf', bg: p.on ? '#12a594' : '#fff',
+        tag: p.on ? 'ĐANG ÁP' : 'TẮT', tagBg: p.on ? '#e6f5f3' : '#eef0f2', tagFg: p.on ? '#0b5f56' : '#5a636b',
+      })),
+
+      ztNets: ZT_NETS.map((n, i) => i).filter(i => scopeIds.includes(ZT_NETS[i].tid) || tDesc(ZT_NETS[i].tid).includes(s.scope || 'root')).map(i => {
+        const n = ZT_NETS[i];
+        const on = ztIdx === i;
+        const memCount = ZT_MEMBERS.filter(m => m.net === i && scopeIds.includes(m.tid)).length;
+        const anyPending = ZT_MEMBERS.some(m => m.net === i && scopeIds.includes(m.tid) && m.auth === 'CHỜ DUYỆT');
+        return {
+          name: n.name, tenant: n.tenant, members: memCount + ' node',
+          dotColor: anyPending ? '#c0292d' : '#12a594',
+          pick: () => this.setState({ztNet: i}),
+          cardBg: on ? '#f2faf9' : '#fff', cardBorder: on ? '#12a594' : '#dfe3e6',
+        };
+      }),
+      ztNetCount: ZT_NETS.filter(n => scopeIds.includes(n.tid) || tDesc(n.tid).includes(s.scope || 'root')).length,
+      ztName: ZT_NETS[ztIdx].name,
+      ztId: ZT_NETS[ztIdx].nwid,
+      ztCidr: ZT_NETS[ztIdx].cidr,
+      ztStats: [
+        {k:'THÀNH VIÊN', v: ztMem.length, color:'#16191c'},
+        {k:'CHẾ ĐỘ', v: ZT_NETS[ztIdx].access, color:'#16191c'},
+        {k:'TENANT', v: ZT_NETS[ztIdx].tenant, color:'#0f8175'},
+      ],
+      ztKpis: [
+        {label:'MẠNG TRONG PHẠM VI', value: ZT_NETS.filter(n => scopeIds.includes(n.tid) || tDesc(n.tid).includes(s.scope || 'root')).length, delta:'PRIVATE network', deltaColor:'#7c858d'},
+        {label:'NODE ONLINE', value: ZT_MEMBERS.filter(m => scopeIds.includes(m.tid) && m.online === 'ONLINE').length + ' / ' + ZT_MEMBERS.filter(m => scopeIds.includes(m.tid)).length, delta:'toàn phạm vi', deltaColor:'#0b5f56'},
+        {label:'CHỜ DUYỆT', value: ZT_MEMBERS.filter(m => scopeIds.includes(m.tid) && m.auth === 'CHỜ DUYỆT').length, delta:'cần xử lý', deltaColor:'#c0292d'},
+        {label:'ĐI QUA RELAY', value: ZT_MEMBERS.filter(m => scopeIds.includes(m.tid) && m.path === 'RELAY').length, delta:'không P2P trực tiếp', deltaColor:'#8a5a11'},
+      ],
+      ztApproveLabel: ztPending.length ? 'Duyệt ' + ztPending.length + ' yêu cầu' : 'Không có yêu cầu chờ',
+      ztApproveBg: ztPending.length ? '#12a594' : '#fff',
+      ztApproveFg: ztPending.length ? '#04211e' : '#9aa2a9',
+      ztApproveBorder: ztPending.length ? '#0f8175' : '#dfe3e6',
+      ztTabs: ['Thành viên','Định tuyến','Flow rules'].map(l => this.chip(l, s.ztTab === l, () => this.setState({ztTab: l}))),
+      isZtTabMembers: s.ztTab === 'Thành viên',
+      isZtTabRoutes: s.ztTab === 'Định tuyến',
+      isZtTabFlow: s.ztTab === 'Flow rules',
+      ztMembers: ztMem.map(m => ({
+        name: m.name, addr: m.addr, ip: m.ip, ver: m.ver, latency: m.latency,
+        latColor: m.latency === '—' ? '#c0292d' : parseInt(m.latency,10) > 60 ? '#b7791f' : '#4b545c',
+        role: m.role, path: m.path,
+        auth: m.auth, authBg: m.auth === 'ĐÃ DUYỆT' ? '#e6f5f3' : m.auth === 'CHỜ DUYỆT' ? '#fdf3e2' : '#fdecec',
+        authFg: m.auth === 'ĐÃ DUYỆT' ? '#0b5f56' : m.auth === 'CHỜ DUYỆT' ? '#8a5a11' : '#a52327',
+        online: m.online, onColor: m.online === 'ONLINE' ? '#12a594' : '#c4cacf',
+      })),
+      ztRoutes: [
+        {dest:'10.147.20.0/24', via:'(LAN ZeroTier)', note:'Route mặc định của mạng ảo'},
+        {dest:'10.10.0.0/16', via:'10.147.20.11', note:'Về LAN quản trị Hà Đô'},
+        {dest:'10.30.0.0/16', via:'10.147.20.21', note:'Về LAN NetSài Gòn'},
+        {dest:'0.0.0.0/0', via:'10.147.20.1', note:'Default route — chỉ bật cho máy NOC'},
+      ],
+      ztFlow: [
+        {r:'accept ipprotocol icmp;', note:'Cho ping chẩn đoán toàn mạng'},
+        {r:'accept dport 8291 and tag tenant == self;', note:'Winbox chỉ trong cùng tenant'},
+        {r:'accept dport 22,443 and tag role == noc;', note:'SSH/HTTPS chỉ cho NOC'},
+        {r:'drop;', note:'Chặn mọi lưu lượng còn lại'},
+      ],
+      rangeOpts: ['7 ngày','30 ngày','90 ngày','12 tháng'].map(l => this.chip(l, (s.range || '30 ngày') === l, () => this.setState({range: l}))),
+      anaKpis: [
+        {label:'ARPU', value:'258K', delta:'+3,1% so với kỳ trước', deltaColor:'#0b5f56'},
+        {label:'CHURN THÁNG', value:'1,84%', delta:'-0,3 điểm', deltaColor:'#0b5f56'},
+        {label:'DATA TB / USER', value:'384 GB', delta:'+27 GB', deltaColor:'#0b5f56'},
+        {label:'PHIÊN TB / NGÀY', value:'6,2', delta:'ổn định', deltaColor:'#7c858d'},
+        {label:'USER VƯỢT QUOTA', value: scaleSubs(137).toLocaleString('vi-VN'), delta:'+' + scaleSubs(22) + ' tuần này', deltaColor:'#8a5a11'},
+      ],
+      growth: ['09','10','11','12','01','02','03','04','05','06','07','08'].map((m,i) => {
+        const add = [180,205,164,232,141,198,226,251,209,268,244,286][i];
+        const ch  = [ 62, 71, 88, 54, 96, 73, 65, 58, 81, 60, 69, 52][i];
+        return {m, addH: (add/300*100).toFixed(1) + '%', churnH: (ch/300*100).toFixed(1) + '%'};
+      }),
+      pkgMixTotal: subs.toLocaleString('vi-VN'),
+      pkgMix: (() => {
+        const raw = PACKAGES.map(pk => parseInt(pk.subs.replace(/\./g,''),10));
+        const tot = raw.reduce((a,b) => a+b, 0);
+        let left = subs;
+        return PACKAGES.map((pk, i) => {
+          const n = i === PACKAGES.length - 1 ? left : Math.round(raw[i] / tot * subs);
+          left -= n;
+          return {name: pk.name, subs: n.toLocaleString('vi-VN'), pct: (n / Math.max(1, subs) * 100).toFixed(1) + '%', tone: pk.tone};
+        });
+      })(),
+      heat: ['T2','T3','T4','T5','T6','T7','CN'].map((d,r) => ({
+        d,
+        cells: Array.from({length:24}, (_,h) => {
+          const day = r >= 5 ? 1.25 : 1;
+          const v = Math.max(0, Math.sin((h-4)/24*Math.PI*1.05)) * .55 + Math.max(0, Math.sin((h-16)/12*Math.PI)) * .62;
+          const x = Math.min(1, v * day + .06);
+          return {bg: x < .12 ? '#f2f4f5' : 'rgba(18,165,148,' + (0.13 + x * 0.82).toFixed(2) + ')'};
+        }),
+      })),
+      topUsers: sUsers.slice().sort((a,b) => b.used - a.used).slice(0,7).map(u => {
+        const mult = u.used / 340;
+        return {
+          name: u.name, pkg: u.pkg, data: Math.round(u.used).toLocaleString('vi-VN') + ' GB',
+          mult: mult.toFixed(1).replace('.',',') + '×',
+          pct: Math.min(100, mult * 40).toFixed(0) + '%',
+          tone: mult > 5 ? '#c0292d' : mult > 1.5 ? '#b7791f' : '#0f8175',
+        };
+      }),
+      funnel: [
+        {k:'ĐANG HOẠT ĐỘNG', v: subs, pct:'100%', color:'#12a594'},
+        {k:'ONLINE 7 NGÀY QUA', v: Math.round(subs*.94), pct:'94%', color:'#0f8175'},
+        {k:'GIA HẠN ĐÚNG HẠN', v: Math.round(subs*.85), pct:'85%', color:'#0b5f56'},
+        {k:'TRỄ HẠN < 15 NGÀY', v: Math.round(subs*.09), pct:'9%', color:'#b7791f'},
+        {k:'RỜI MẠNG KỲ NÀY', v: Math.round(subs*.011), pct:'1%', color:'#c0292d'},
+      ].map(f => ({k: f.k, v: f.v.toLocaleString('vi-VN'), pct: f.pct, color: f.color})),
+      migration: [
+        {from:'Home 30M', to:'Home 60M', n:'+184', color:'#0b5f56'},
+        {from:'Home 60M', to:'Home 150M', n:'+96', color:'#0b5f56'},
+        {from:'Hotspot Ngày', to:'Hotspot Tuần', n:'+61', color:'#0b5f56'},
+        {from:'Home 60M', to:'Home 30M', n:'-38', color:'#c0292d'},
+        {from:'Home 150M', to:'Home 60M', n:'-17', color:'#c0292d'},
+      ],
+      insights: [
+        {r:null, text: scaleSubs(137) + ' user vượt quota liên tục 2 kỳ — chào nâng lên Home 150M Pro, doanh thu tăng ~' + scaleSubs(24) + ' triệu/tháng.', color:'#12a594'},
+        {r:'HCM-CORE-02', text:'Hotspot Ngày tại HCM-CORE-02 chiếm 38% phiên vào 20:00–22:00; cân nhắc giới hạn burst để giảm CPU 92%.', color:'#b7791f'},
+        {r:'HN-EDGE-04', text:'HN-EDGE-04 đạt 78% CPU vào 20:00–22:00; nên tách hotspot sang queue riêng.', color:'#b7791f'},
+        {r:null, text: Math.round(subs*.09) + ' thuê bao trễ hạn dưới 15 ngày — gửi nhắc tự động trước 3 ngày để giữ churn dưới 1,5%.', color:'#b7791f'},
+        {r:'CT-EDGE-02', text:'CT-EDGE-02 mất kết nối làm số liệu 74 user không cập nhật; loại khỏi báo cáo kỳ này.', color:'#c0292d'},
+      ].filter(i => !i.r || sNames.includes(i.r)),
+      goRouters: this.nav('routers'),
+      goAssign: this.nav('assign'),
+      goUsers: this.nav('users'),
+      isRouterDetail: s.screen === 'routerdetail',
+      isUserDetail: s.screen === 'userdetail',
+      isImportOpen: !!s.importOpen,
+      openImport: () => this.setState({importOpen: true}),
+      closeImport: () => this.setState({importOpen: false}),
+      isAddRouterOpen: !!s.addRouterOpen,
+      openAddRouter: () => this.setState({addRouterOpen: true}),
+      closeAddRouter: () => this.setState({addRouterOpen: false}),
+      tenantSearch: s.tenantSearch,
+      setTenantSearch: e => this.setState({tenantSearch: e.target.value}),
+      addRouterTenants: TENANTS.filter(t => t.name.toLowerCase().includes((s.tenantSearch || '').toLowerCase())).map(t => ({
+        id: t.id, name: '—'.repeat(tDepth(t.id)) + (tDepth(t.id) ? ' ' : '') + t.name,
+        picked: s.newRouterTenant === t.id,
+        pick: () => this.setState({newRouterTenant: t.id, tenantSearch: t.name}),
+      })),
+      addRouterTenantsEmpty: !TENANTS.some(t => t.name.toLowerCase().includes((s.tenantSearch || '').toLowerCase())),
+      submitAddRouter: () => this.setState({addRouterOpen: false}),
+      isAddUserOpen: !!s.addUserOpen,
+      openAddUser: () => this.setState({addUserOpen: true}),
+      closeAddUser: () => this.setState({addUserOpen: false}),
+      addUserTypeOpts: ['PPPOE','HOTSPOT'].map(t => ({label: t === 'PPPOE' ? 'PPPoE' : 'Hotspot', go: () => this.setState({newUserType: t}), border: s.newUserType === t ? '#0f8175' : '#dfe3e6', bg: s.newUserType === t ? '#12a594' : '#fff', fg: s.newUserType === t ? '#04211e' : '#4b545c'})),
+      addUserRouters: ROUTERS.map(r => ({name: r.name})),
+      addUserPackages: PACKAGES.map(p => ({name: p.name})),
+      submitAddUser: () => this.setState({addUserOpen: false}),
+      ...this.detailVals(),
+      ...this.userDetailVals(),
+
+      kpis: [
+        {label:'THIẾT BỊ ONLINE', value: sUp.length + ' / ' + sRouters.length, delta: (sRouters.length - sUp.length) + ' thiết bị cần xử lý', deltaColor: sUp.length < sRouters.length ? '#c0292d' : '#0b5f56'},
+        {label:'USER ĐANG ONLINE', value: onlineUsers.toLocaleString('vi-VN'), delta:'+' + scaleSubs(312) + ' so với hôm qua', deltaColor:'#0b5f56'},
+        {label:'THUÊ BAO HOẠT ĐỘNG', value: subs.toLocaleString('vi-VN'), delta:'+' + scaleSubs(46) + ' trong 7 ngày', deltaColor:'#0b5f56'},
+        {label:'SẮP HẾT HẠN 7 NGÀY', value: scaleSubs(218).toLocaleString('vi-VN'), delta:'Cần gia hạn', deltaColor:'#8a5a11'},
+        {label:'DOANH THU THÁNG', value: scopeT.revenue, delta:'+8,4% MoM', deltaColor:'#0b5f56'},
+      ],
+      deviceDataTotal: sRouters.reduce((a,r) => a + r.online * 0.62, 0).toFixed(0) + ' GB',
+      deviceData: (() => {
+        const rows = sRouters.map(r => ({r, gb: r.online * 0.62}));
+        const max = Math.max(1, ...rows.map(x => x.gb));
+        return rows.slice().sort((a,b) => b.gb - a.gb).map(x => ({
+          name: x.r.name, site: x.r.site,
+          barH: (x.gb / max * 100).toFixed(0) + '%',
+          data: x.gb.toFixed(0) + ' GB',
+          tone: x.gb / max > .8 ? '#c0292d' : x.gb / max > .5 ? '#b7791f' : '#12a594',
+          open: this.openRouterDetail(x.r.name),
+        }));
+      })(),
+
+      topRouters: sRouters.slice().sort((a,b) => b.cpu - a.cpu).slice(0,5).map(r => ({
+        name: r.name, ip: r.ip, site: r.site, cpu: r.cpu, cpuColor: cpuColor(r.cpu),
+        online: r.online.toLocaleString('vi-VN'),
+        tput: (r.online / 420).toFixed(2) + ' Gbps',
+        open: this.openRouterDetail(r.name),
+      })),
+
+      alertCount: [
+        'CT-EDGE-02','HCM-CORE-02','HP-EDGE-03','HN-EDGE-04'
+      ].filter(n => sNames.includes(n)).length + 2,
+      alerts: [
+        {r:'CT-EDGE-02', text:'CT-EDGE-02 mất kết nối API', meta:'10.40.2.1 · 18 phút trước', color:'#c0292d'},
+        {r:'HCM-CORE-02', text:'HCM-CORE-02 CPU 92% liên tục 15 phút', meta:'10.30.0.2 · 24 phút trước', color:'#c0292d'},
+        {r:'HP-EDGE-03', text:'HP-EDGE-03 RAM 71% · RouterOS lỗi thời 7.11.2', meta:'10.60.3.1 · 1 giờ trước', color:'#b7791f'},
+        {r:'HN-EDGE-04', text:'HN-EDGE-04 CPU 78% giờ cao điểm', meta:'10.10.4.1 · 2 giờ trước', color:'#b7791f'},
+        {r:null, text: scaleSubs(218) + ' thuê bao hết hạn trong 7 ngày', meta: scopeT.name + ' · 3 giờ trước', color:'#b7791f'},
+        {r:null, text:'Đồng bộ profile pkg-hs-week thành công ' + sRouters.length + '/' + sRouters.length, meta: scopeT.name + ' · 5 giờ trước', color:'#12a594'},
+      ].filter(a => !a.r || sNames.includes(a.r)).map((a, i, arr) => Object.assign({}, a, {n: arr.length})),
+
+      routers: (() => {
+        const PP = 12;
+        const all = this.visibleRouters();
+        const pages = Math.max(1, Math.ceil(all.length / PP));
+        const page = Math.min(Math.max(1, s.routerPage), pages);
+        return all.slice((page-1)*PP, page*PP);
+      })().map(r => {
+        const st = ST[r.status] || ['#eef0f2','#5a636b'];
+        const stopped = s.stoppedRouters && s.stoppedRouters[r.name];
+        return Object.assign({}, r, {
+          cpuColor: cpuColor(r.cpu), stBg: st[0], stFg: st[1], online: r.online.toLocaleString('vi-VN'),
+          open: this.openRouterDetail(r.name),
+          stopLabel: stopped ? 'Bật lại' : 'Dừng',
+          stopFg: stopped ? '#0b5f56' : '#a52327',
+          stop: e => { e.stopPropagation(); this.setState(st2 => ({stoppedRouters: Object.assign({}, st2.stoppedRouters, {[r.name]: !stopped})})); },
+        });
+      }),
+      routerCount: this.visibleRouters().length,
+      routerPageStart: this.visibleRouters().length ? ((Math.min(Math.max(1,s.routerPage), Math.max(1,Math.ceil(this.visibleRouters().length/12)))-1)*12 + 1) : 0,
+      routerPageEnd: Math.min(this.visibleRouters().length, Math.min(Math.max(1,s.routerPage), Math.max(1,Math.ceil(this.visibleRouters().length/12)))*12),
+      routerPageNums: Array.from({length: Math.max(1, Math.ceil(this.visibleRouters().length/12))}, (_,i) => this.routerPageChip(i+1, Math.min(Math.max(1,s.routerPage), Math.max(1,Math.ceil(this.visibleRouters().length/12))) === i+1)),
+      routerPagePrev: () => this.setState(st2 => ({routerPage: Math.max(1, st2.routerPage - 1)})),
+      routerPageNext: () => this.setState(st2 => ({routerPage: Math.min(Math.max(1,Math.ceil(this.visibleRouters().length/12)), st2.routerPage + 1)})),
+      routerPagePrevColor: s.routerPage <= 1 ? '#c4cacf' : '#4b545c',
+      routerPageNextColor: s.routerPage >= Math.max(1,Math.ceil(this.visibleRouters().length/12)) ? '#c4cacf' : '#4b545c',
+      routerFilters: ['Tất cả','Online','Có vấn đề','Tải cao'].map(l => this.chip(l, s.routerFilter === l, () => this.setState({routerFilter: l}))),
+
+      users,
+      userCount: users.length,
+      userTotal: subs.toLocaleString('vi-VN'),
+      routerAllLabel: 'Tất cả ' + sRouters.length + ' thiết bị →',
+      pollerLabel: 'Poller 15s · ' + sUp.length + '/' + sRouters.length + ' kết nối',
+      tenantLevels: (new Set(scopeIds.map(tDepth))).size,
+      userTabs: ['Hoạt động','Ngưng hoạt động','Tất cả'].map(l => ({label: l, fg: s.userTab === l ? '#12a594' : '#4b545c', bd: s.userTab === l ? '#12a594' : 'transparent', go: () => this.setState({userTab: l})})),
+      userFilters: ['Tất cả','PPPoE','Hotspot','Cần xử lý'].map(l => this.chip(l, s.userFilter === l, () => this.setState({userFilter: l}))),
+      userPageStart: this.visibleUsers().length ? ((Math.min(Math.max(1,s.userPage), Math.max(1,Math.ceil(this.visibleUsers().length/15)))-1)*15 + 1) : 0,
+      userPageEnd: Math.min(this.visibleUsers().length, Math.min(Math.max(1,s.userPage), Math.max(1,Math.ceil(this.visibleUsers().length/15)))*15),
+      userPageNums: Array.from({length: Math.max(1, Math.ceil(this.visibleUsers().length/15))}, (_,i) => this.pageChip(i+1, Math.min(Math.max(1,s.userPage), Math.max(1,Math.ceil(this.visibleUsers().length/15))) === i+1)),
+      userPagePrev: () => this.setState(st2 => ({userPage: Math.max(1, st2.userPage - 1)})),
+      userPageNext: () => this.setState(st2 => ({userPage: Math.min(Math.max(1,Math.ceil(this.visibleUsers().length/15)), st2.userPage + 1)})),
+      userPagePrevColor: s.userPage <= 1 ? '#c4cacf' : '#4b545c',
+      userPageNextColor: s.userPage >= Math.max(1,Math.ceil(this.visibleUsers().length/15)) ? '#c4cacf' : '#4b545c',
+      selCount,
+      bulkFg: selCount ? '#0f8175' : '#9aa2a9',
+
+      packages,
+      pkgCount: PACKAGES.length,
+      editorTitle: 'Sửa gói · ' + pkg.name,
+      formName: f.name, formDown: f.down, formUp: f.up, formQuota: f.quota, formDev: f.dev, formPrice: f.price,
+      setFormName: e => this.setState({form: Object.assign({}, f, {name: e.target.value})}),
+      setFormDown: e => this.setState({form: Object.assign({}, f, {down: e.target.value})}),
+      setFormUp: e => this.setState({form: Object.assign({}, f, {up: e.target.value})}),
+      setFormQuota: e => this.setState({form: Object.assign({}, f, {quota: e.target.value})}),
+      setFormDev: e => this.setState({form: Object.assign({}, f, {dev: e.target.value})}),
+      setFormPrice: e => this.setState({form: Object.assign({}, f, {price: e.target.value})}),
+      cliPreview: cli,
+      termUnitOpts: ['Ngày','Tháng'].map(u => this.chip(u, s.termUnit === u, () => this.setState({termUnit: u, term: (u === 'Ngày' ? TERMS_DAY : TERMS_MONTH)[0]}))),
+      termOpts: (s.termUnit === 'Ngày' ? TERMS_DAY : TERMS_MONTH).map(t => this.chip(t, s.term === t, () => this.setState({term: t}))),
+
+      selectAll: () => this.setState({sel: USERS.reduce((a,_,i) => (a[i] = true, a), {}), applied: false}),
+      clearAll: () => this.setState({sel: {}, applied: false}),
+      assignRouters: sRouters.map(r => {
+        const on = s.assignRouter === r.name;
+        const st = ST[r.status] || ['#eef0f2','#5a636b'];
+        return {
+          name: r.name, ip: r.ip, site: r.site, status: r.status, stBg: st[0], stFg: st[1],
+          pick: () => this.setState(st2 => ({assignRouter: st2.assignRouter === r.name ? null : r.name, applied: false})),
+          cardBg: on ? '#f2faf9' : '#fff', cardBorder: on ? '#12a594' : '#dfe3e6',
+          radioBorder: on ? '#0f8175' : '#c4cacf', radioBg: on ? '#12a594' : '#fff',
+          radioRing: on ? 'inset 0 0 0 2px #fff' : 'none',
+        };
+      }),
+      summary: [
+        {k:'SỐ USER', v: selCount + ' người dùng', color:'#16191c'},
+        {k:'GÓI ÁP DỤNG', v: pkg.name, color:'#0f8175'},
+        {k:'MIKROTIK (NAS)', v: s.assignRouter || 'Giữ nguyên hiện tại', color: s.assignRouter ? '#0f8175' : '#7c858d'},
+        {k:'THIẾT BỊ LIÊN QUAN', v: new Set(selIdx.map(i => s.assignRouter || USERS[i].router)).size + ' router', color:'#16191c'},
+        {k:'CHÊNH LỆCH DOANH THU', v: (selCount * parseInt(pkg.price.replace(/\./g,''),10)).toLocaleString('vi-VN') + ' đ/th', color:'#16191c'},
+      ],
+      assignCli: selCount ? '/ppp secret set [find name~"..."] profile=' + pkg.code + (s.assignRouter ? ' router=' + s.assignRouter : '') + '  ×' + selCount : 'Chưa chọn người dùng nào.',
+      applyBg: selCount ? '#12a594' : '#eef0f2',
+      applyFg: selCount ? '#04211e' : '#9aa2a9',
+      applyLabel: selCount ? 'Gán ' + pkg.name + ' cho ' + selCount + ' user' : 'Chọn user để tiếp tục',
+      applied: s.applied,
+      appliedNote: selCount + ' user → ' + pkg.name + (s.assignRouter ? ' · ' + s.assignRouter : ''),
+      applyAssign: () => { if (selCount) this.setState({applied: true}); },
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1110 @@
+:root {
+  --text-heading: #fff;
+  --sidebar-bg: rgba(15, 23, 42, 0.8);
+  --bg-color: #0b0f19;
+  --panel-bg: rgba(22, 30, 46, 0.7);
+  --filter-bar-bg: rgba(255, 255, 255, 0.02);
+  --input-bg: rgba(15, 23, 42, 0.6);
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --border: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg-color: #f1f5f9;
+  --panel-bg: rgba(255, 255, 255, 0.9);
+  --filter-bar-bg: rgba(255, 255, 255, 0.5);
+  --input-bg: #ffffff;
+  --nav-hover-bg: rgba(0, 0, 0, 0.04);
+  --nav-active-bg: rgba(37, 99, 235, 0.08);
+  --text-main: #334155;
+  --text-heading: #0f172a;
+  --text-muted: #475569;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --danger: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --border: rgba(0, 0, 0, 0.1);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --sidebar-bg: rgba(255, 255, 255, 0.95);
+  color-scheme: light;
+}
+
+[data-theme="light"] body {
+  background-image:
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #334155;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+button {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--primary-hover);
+  outline-offset: 2px;
+}
+
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.layout-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(16px);
+  border-right: 1px solid var(--border);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sidebar-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-heading);
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  background: var(--nav-hover-bg, rgba(255, 255, 255, 0.05));
+  color: var(--primary);
+}
+
+.nav-item.active {
+  background: var(--nav-active-bg, rgba(255, 255, 255, 0.05));
+  border-left: 3px solid var(--primary);
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--filter-bar-bg);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+}
+
+.filter-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.filter-apply {
+  align-self: end;
+  min-height: 38px;
+}
+
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-main);
+}
+
+.button-secondary:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.compact-button {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.75rem;
+}
+
+.button-secondary.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* Chu phu (subtitle) mo hon chu chinh -- dung rong khap app (Users/ShipDashboard/...) nhung
+   truoc gio chua co dinh nghia, chi la text mac dinh. Them 1 lan o day cho ca app dung chung. */
+.muted-text {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.usage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--filter-bar-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+/* Nut sao chep icon nho, dat canh 1 gia tri (Network ID, Node ID, IP...) trong bang */
+.copyable-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.icon-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.icon-copy-button:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--border);
+  color: var(--text-main);
+}
+
+.icon-copy-button.copied {
+  color: var(--success);
+}
+
+.raw-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.raw-record-list code {
+  display: block;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.two-column-sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+.filter-select {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  outline: none;
+}
+
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Hang chi so gon -- thay MetricCard (to, co Period/Source/Freshness) tren cac trang chi tiet 1
+   thuc the (vd 1 subscriber), noi khong can minh bach nguon du lieu tung chi so nhu dashboard
+   toan ham doi, chi can nhin luot nhanh. */
+.mini-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.mini-stat {
+  flex: 1 1 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  border-left: 3px solid var(--text-muted);
+  border-radius: 8px;
+}
+
+.mini-stat-healthy { border-left-color: var(--success); }
+.mini-stat-warning { border-left-color: var(--warning); }
+.mini-stat-critical { border-left-color: var(--danger); }
+
+.mini-stat-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.mini-stat-value {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-heading);
+}
+
+.mini-stat-unit {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 0.3rem;
+}
+
+.mini-stat-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Bieu do tron co chu o giua (vd % quota da dung) -- recharts khong ho tro san, dung 1 lop
+   position:absolute chong len giua vung ve. */
+.donut-wrap {
+  position: relative;
+}
+
+.donut-center-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donut-center-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.donut-center-caption {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metric-card-button {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+}
+
+.metric-card-button:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.stat-value-unavailable {
+  color: var(--text-muted);
+  font-size: 1.35rem;
+}
+
+.metric-description {
+  min-height: 2.4em;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.metric-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.metric-positive {
+  color: var(--success);
+}
+
+.metric-negative {
+  color: var(--danger);
+}
+
+.metric-drilldown {
+  color: var(--primary-hover);
+  margin-top: 0.25rem;
+}
+
+.data-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.data-state-warning {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.data-state-critical {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.data-state-healthy {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(16, 185, 129, 0.06);
+}
+
+.data-state-icon {
+  color: var(--warning);
+  padding-top: 0.1rem;
+}
+
+.data-state-critical .data-state-icon {
+  color: var(--danger);
+}
+
+.data-state-healthy .data-state-icon {
+  color: var(--success);
+}
+
+.data-state-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.data-state-copy p {
+  margin: 0.3rem 0 0;
+  color: var(--text-main);
+  line-height: 1.45;
+  font-size: 0.85rem;
+}
+
+.data-state-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.65rem;
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+
+.data-state-sources code {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.data-state-warnings {
+  margin: 0.65rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+
+.collector-guidance {
+  margin-top: 0.8rem;
+  color: var(--text-main);
+  font-size: 0.82rem;
+}
+
+.collector-guidance summary {
+  color: var(--primary-hover);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.collector-guidance ol {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.collector-guidance p {
+  margin: 0.5rem 0 0;
+}
+
+.empty-state {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 2rem;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.empty-state strong {
+  color: var(--text-main);
+}
+
+.empty-state p {
+  margin: 0.35rem 0 0.7rem;
+  line-height: 1.45;
+}
+
+.empty-state code {
+  color: var(--primary-hover);
+}
+
+/* Ô thống kê nhỏ gọn (StatChip trong VpnZeroTier.tsx) -- thay cho MetricCard to khi chỉ cần liếc
+   nhanh 1 con số + nhãn, không cần period/source/freshness đầy đủ. */
+.stat-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 14px 0 20px;
+}
+
+.stat-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  min-width: 104px;
+}
+
+.stat-chip-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.stat-chip-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.stat-chip-healthy .stat-chip-value { color: var(--success); }
+.stat-chip-warning .stat-chip-value { color: var(--warning); }
+.stat-chip-critical .stat-chip-value { color: var(--danger); }
+
+/* Dòng cảnh báo nhỏ gọn (InlineWarning trong VpnZeroTier.tsx) -- thay cho DataStateNotice to khi
+   chỉ cần báo lỗi ngắn + nút thử lại, không cần icon lớn/mô tả nhiều dòng/collector guidance. */
+.inline-warning-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: var(--danger);
+  font-size: 12.5px;
+  margin: 12px 0;
+}
+
+.inline-warning-line svg {
+  flex-shrink: 0;
+}
+
+.inline-warning-line span {
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-warning-line button {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+/* Khối "hiện secret/key thật đúng 1 lần" (SecretReveal.tsx). CỐ Ý flex-direction: column, khác
+   .empty-state (row) -- đây là khối nhiều dòng (tiêu đề/nội dung/ghi chú xếp chồng), không phải
+   placeholder 1 dòng. min-width: 0 trên code là bắt buộc: không có nó, 1 tiêu đề chứa chuỗi dài
+   không khoảng trắng (vd credential_ref) ép cả hàng "code + nút" co lại còn vài px (đã xảy ra thật). */
+.token-reveal-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  border: 1px solid;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.token-reveal-row {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.token-reveal-row code {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  word-break: break-all;
+  font-size: 12px;
+}
+
+.dashboard-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0.7rem 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.dashboard-meta strong {
+  color: var(--text-main);
+}
+
+.table-shell {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 680px;
+}
+
+.data-table th,
+.data-table td {
+  padding: 0.75rem 0.8rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.data-table th {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.data-table td {
+  color: var(--text-main);
+  font-size: 0.84rem;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.status-dot::before {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.status-dot.healthy::before {
+  background: var(--success);
+}
+
+.status-dot.warning::before {
+  background: var(--warning);
+}
+
+.status-dot.critical::before {
+  background: var(--danger);
+}
+
+/* Chấm nhấp nháy cho trạng thái "đang online thật" (vd ZeroTier member) -- chỉ dùng thêm cùng
+   .healthy, không đổi hành vi .status-dot mặc định ở các trang khác. */
+.status-dot.pulse::before {
+  animation: statusPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50% { opacity: 0.55; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
+}
+
+.tab-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.7rem;
+}
+
+.tab-row button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.tab-row button.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.section-heading h2,
+.section-heading h3 {
+  margin: 0;
+}
+
+.section-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.section-heading p {
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .layout-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .sidebar-title {
+    margin-bottom: 0.5rem;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+
+  .filters-bar {
+    align-items: stretch;
+  }
+
+  .filter-control {
+    flex: 1 1 150px;
+  }
+
+  .filter-apply {
+    align-self: stretch;
+  }
+
+  .two-column-sections {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stat-title {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: bold;
+  color: var(--text-heading);
+}
+
+.state-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--warning);
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+}
+
+/* Login Page */
+.login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.login-box {
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-field {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+}
+
+.loading-spinner {
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  border-top: 3px solid var(--primary);
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.stale-data-banner {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid var(--warning);
+  color: var(--warning);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.freshness-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.fresh {
+  color: var(--success);
+}
+
+.stale {
+  color: var(--warning);
+}
+
+/* Two-column ship/list + detail layouts (ShipDashboard, Packages...). */
+.ship-dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ship-dashboard-columns {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.ship-list-panel {
+  flex: 0 0 280px;
+  max-height: 640px;
+  overflow-y: auto;
+}
+
+.ship-main-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ship-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.ship-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: left;
+}
+
+.ship-list-item:hover {
+  border-color: var(--primary);
+}
+
+.ship-list-item.selected {
+  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.ship-list-item span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ship-list-item small {
+  color: var(--text-muted);
+}
+
+.ship-summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.explanation-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.explanation-grid strong {
+  color: var(--text-heading);
+}
+
+.area-selector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.area-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-main);
+  border: 1px solid var(--border);
+}
+
+.area-selector.selected {
+  border-color: var(--primary);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.area-selector small {
+  color: var(--text-muted);
+}
+
+/* Modal (Users "+ Thêm user"...) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 23, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+.modal-card-wide {
+  max-width: 680px;
+}
+
+/* Danh sách hàng có thể thêm/xoá (IP pool, route...) trong form ZeroTier */
+.editable-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.editable-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.editable-row .filter-select {
+  flex: 1;
+  min-width: 0;
+}

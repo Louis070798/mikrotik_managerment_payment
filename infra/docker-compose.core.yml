@@ -1,0 +1,141 @@
+# LOCAL/STAGING ONLY. All services share one host; this file is not a production HA topology.
+name: mikrotik-fleet-core
+
+services:
+  postgres-control:
+    image: ${POSTGRES_CONTROL_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_DB: ${POSTGRES_CONTROL_DB:-fleet_control}
+      POSTGRES_USER: ${POSTGRES_CONTROL_USER:-fleet_app}
+      POSTGRES_PASSWORD: ${POSTGRES_CONTROL_PASSWORD:?Set POSTGRES_CONTROL_PASSWORD in infra/.env.core}
+    ports:
+      - "127.0.0.1:${POSTGRES_CONTROL_PORT:-54332}:5432"
+    volumes:
+      - pg_control_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  postgres-aaa:
+    image: ${POSTGRES_AAA_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_DB: ${POSTGRES_AAA_DB:-fleet_aaa}
+      POSTGRES_USER: ${POSTGRES_AAA_USER:-fleet_radius}
+      POSTGRES_PASSWORD: ${POSTGRES_AAA_PASSWORD:?Set POSTGRES_AAA_PASSWORD in infra/.env.core}
+    ports:
+      - "127.0.0.1:${POSTGRES_AAA_PORT:-54333}:5432"
+    volumes:
+      - pg_aaa_data:/var/lib/postgresql/data
+      - ./postgres-aaa-schema.sql:/docker-entrypoint-initdb.d/001_freeradius_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  timescale:
+    image: ${TIMESCALE_IMAGE:-timescale/timescaledb:2.16.1-pg16}
+    environment:
+      POSTGRES_DB: ${TIMESCALE_DB:-fleet_analytics}
+      POSTGRES_USER: ${TIMESCALE_USER:-fleet_analytics}
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:?Set TIMESCALE_PASSWORD in infra/.env.core}
+    ports:
+      - "127.0.0.1:${TIMESCALE_PORT:-54334}:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  clickhouse:
+    image: ${CLICKHOUSE_IMAGE:-clickhouse/clickhouse-server:24.8}
+    ports:
+      - "127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8124}:8123"
+      - "127.0.0.1:${CLICKHOUSE_NATIVE_PORT:-9001}:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.4-alpine}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in infra/.env.core}
+    command: ["sh", "-c", "redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  nats:
+    image: ${NATS_IMAGE:-nats:2.10-alpine}
+    command: ["-js", "-sd", "/data", "-m", "8222"]
+    ports:
+      - "127.0.0.1:${NATS_CLIENT_PORT:-4223}:4222"
+      - "127.0.0.1:${NATS_MONITOR_PORT:-8223}:8222"
+    volumes:
+      - nats_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8222/healthz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-a:
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2024-10-13T13-34-11Z}
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in infra/.env.core}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env.core}
+    ports:
+      - "127.0.0.1:${MINIO_A_API_PORT:-9100}:9000"
+      - "127.0.0.1:${MINIO_A_CONSOLE_PORT:-9101}:9001"
+    volumes:
+      - minio_a_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio-b:
+    image: ${MINIO_IMAGE:-minio/minio:RELEASE.2024-10-13T13-34-11Z}
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in infra/.env.core}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in infra/.env.core}
+    ports:
+      - "127.0.0.1:${MINIO_B_API_PORT:-9200}:9000"
+      - "127.0.0.1:${MINIO_B_CONSOLE_PORT:-9201}:9001"
+    volumes:
+      - minio_b_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pg_control_data:
+  pg_aaa_data:
+  timescale_data:
+  clickhouse_data:
+  clickhouse_logs:
+  redis_data:
+  nats_data:
+  minio_a_data:
+  minio_b_data:
+

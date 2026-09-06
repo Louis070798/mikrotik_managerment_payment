@@ -1,0 +1,10 @@
+# Template only. Copy into FreeRADIUS clients.conf on each RADIUS node.
+# Replace the ZeroTier CIDR and secret per NAS. Never commit real secrets.
+
+client mikrotik-ship-template {
+    ipaddr = <ZEROTIER_MIKROTIK_IP_OR_CIDR>
+    secret = <PER_NAS_SHARED_SECRET_FROM_SECRET_MANAGER>
+    shortname = mikrotik-ship-template
+    nastype = mikrotik
+}
+

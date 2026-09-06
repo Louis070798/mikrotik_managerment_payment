@@ -1,0 +1,65 @@
+/interface bridge
+add name=BUSINESS
+add name=CREW
+/interface ethernet
+set [ find default-name=ether13 ] comment="Starlink ether1" name=wan1
+/ip hotspot profile
+add dns-name=hotspot.info hotspot-address=192.168.6.1 name=hsprof1 radius-interim-update=5m use-radius=yes
+/ip hotspot user profile
+set [ find default=yes ] keepalive-timeout=12h name=Hotspot shared-users=5
+/ip pool
+add name=dhcp_pool0 ranges=192.168.20.2-192.168.20.254
+add name=hs-pool-7 ranges=192.168.6.2-192.168.6.254
+/ip dhcp-server
+add address-pool=dhcp_pool0 interface=BUSINESS name=dhcp1
+add address-pool=hs-pool-7 interface=CREW name=dhcp2
+/ip hotspot
+add address-pool=hs-pool-7 addresses-per-mac=1 disabled=no idle-timeout=12h interface=CREW name=hotspot1 profile=hsprof1
+/zerotier
+set zt1 disabled=no disabled=no
+/zerotier interface
+add allow-default=no allow-global=no allow-managed=yes disabled=no instance=zt1 name=zerotier1 network=4cd06dc1f147eda3
+
+/interface bridge port
+
+add bridge=BUSINESS interface=ether2
+add bridge=BUSINESS interface=ether3
+add bridge=BUSINESS interface=ether4
+add bridge=BUSINESS interface=ether5
+
+/ip neighbor discovery-settings
+set discover-interface-list=all
+/ip address
+add address=192.168.6.1/24 interface=CREW network=192.168.6.0
+add address=192.168.20.1/24 interface=BUSINESS network=192.168.20.0
+/ip dhcp-client
+add interface=wan1
+/ip dhcp-server network
+
+add address=192.168.20.0/24 dns-server=8.8.8.8,8.8.4.4 gateway=192.168.20.1
+/ip dns
+set allow-remote-requests=yes servers=8.8.8.8,8.8.4.4
+/ip firewall filter
+add action=passthrough chain=unused-hs-chain comment="place hotspot rules here" disabled=yes
+/ip firewall nat
+
+add action=masquerade chain=srcnat
+add action=masquerade chain=srcnat comment="masquerade hotspot network" src-address=192.168.6.0/24
+
+
+/ip service
+set www disabled=yes
+set www-ssl certificate=router disabled=no
+/radius
+add address=172.29.172.3 require-message-auth=no service=hotspot src-address=172.29.163.95 timeout=5s
+/radius incoming
+set accept=yes
+/system clock
+set time-zone-autodetect=no time-zone-name=Asia/Ho_Chi_Minh
+/system note
+set show-at-login=no
+/system routerboard settings
+set enter-setup-on=delete-key
+/system scheduler
+add interval=5m name=sch_http_get_interfaces on-event=http_get_interfaces policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-date=2025-06-20 start-time=00:00:00
+

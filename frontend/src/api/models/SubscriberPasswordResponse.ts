@@ -3,13 +3,9 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Mat khau RADIUS that cua subscriber -- CHI xuat hien trong response nay, khong bao gio doc lai duoc sau do.
+ * Xac nhan da dat mat khau RADIUS cho subscriber -- mat khau do admin tu go trong requestBody, server khong bao gio tra lai plaintext.
  */
 export type SubscriberPasswordResponse = {
-    /**
-     * Plaintext, hien mot lan duy nhat.
-     */
-    password?: string;
     issued_at?: string;
 };
 

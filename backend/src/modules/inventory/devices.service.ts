@@ -104,6 +104,11 @@ export class DevicesService {
     const existingDevice = await this.db.query.devices.findFirst({ where: and(eq(devices.shipId, input.ship_id), eq(devices.code, input.code), isNull(devices.deletedAt)) });
     if (existingDevice) throw new ApiException('RESOURCE_CONFLICT', `Device code '${input.code}' is already in use for this ship`, { code: input.code });
 
+    // Moi tau chi duoc gan DUNG 1 thiet bi Smartbox -- chan tao them thiet bi thu 2 cho cung 1 tau
+    // (bat ke code gi), khac check code trung o tren (chan trung MA, cai nay chan trung TAU).
+    const shipHasAnyDevice = await this.db.query.devices.findFirst({ where: and(eq(devices.shipId, input.ship_id), isNull(devices.deletedAt)) });
+    if (shipHasAnyDevice) throw new ApiException('SHIP_ALREADY_HAS_DEVICE', `Ship ${input.ship_id} already has a device assigned — each ship may have only 1 Smartbox device`, { ship_id: input.ship_id, existing_device_id: shipHasAnyDevice.id });
+
     const [row] = await this.db
       .insert(devices)
       .values({
@@ -193,7 +198,9 @@ export class DevicesService {
     const period = resolvePeriod(query, query.timezone ?? ship?.timezone ?? 'UTC');
     const from = new Date(period.from);
     const to = new Date(period.to);
-    const bucket = bucketSql(interfaceCounterDeltas.bucket, period.granularity, period.timezone);
+    // .as('bucket') + GROUP BY/ORDER BY theo VI TRI -- xem chu thich dai o dashboard.service.ts
+    // getTimeseries() (loi that voi granularity=1d, khong phai suy doan).
+    const bucket = bucketSql(interfaceCounterDeltas.bucket, period.granularity, period.timezone).as('bucket');
 
     const rows = await this.db
       .select({
@@ -204,8 +211,8 @@ export class DevicesService {
       })
       .from(interfaceCounterDeltas)
       .where(and(eq(interfaceCounterDeltas.deviceId, deviceId), gte(interfaceCounterDeltas.bucket, from), lte(interfaceCounterDeltas.bucket, to)))
-      .groupBy(bucket, interfaceCounterDeltas.accountingGroup)
-      .orderBy(bucket);
+      .groupBy(sql`1`, interfaceCounterDeltas.accountingGroup)
+      .orderBy(sql`1`);
 
     const [wanTotalRow] = await this.db
       .select({
@@ -300,7 +307,10 @@ export class DevicesService {
     const period = resolvePeriod(query, query.timezone ?? ship?.timezone ?? 'UTC');
     const from = new Date(period.from);
     const to = new Date(period.to);
-    const bucket = bucketSql(interfaceCounterDeltas.bucket, period.granularity, period.timezone);
+    // .as('bucket') + GROUP BY/ORDER BY theo VI TRI -- xem chu thich dai o dashboard.service.ts
+    // getTimeseries() (loi that voi granularity=1d, khong phai suy doan). bucket la truong THU HAI
+    // trong select ben duoi (sau interfaceId) nen vi tri dung la 2, khong phai 1.
+    const bucket = bucketSql(interfaceCounterDeltas.bucket, period.granularity, period.timezone).as('bucket');
 
     const ifaceRows = await this.db.select().from(interfaces).where(eq(interfaces.deviceId, deviceId)).orderBy(interfaces.name);
 
@@ -334,8 +344,8 @@ export class DevicesService {
       })
       .from(interfaceCounterDeltas)
       .where(and(eq(interfaceCounterDeltas.deviceId, deviceId), gte(interfaceCounterDeltas.bucket, from), lte(interfaceCounterDeltas.bucket, to)))
-      .groupBy(interfaceCounterDeltas.interfaceId, bucket)
-      .orderBy(bucket);
+      .groupBy(interfaceCounterDeltas.interfaceId, sql`2`)
+      .orderBy(sql`2`);
 
     // Reset hàng tháng theo UTC (00:00 UTC ngày 1) -- thuần tính toán bằng mốc thời gian, không lưu
     // trạng thái "đã reset" ở đâu cả, nên không có rủi ro quên chạy job / lệch múi giờ.

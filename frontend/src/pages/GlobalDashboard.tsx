@@ -5,7 +5,8 @@ import type { GlobalFinanceResponse } from '../api/models/GlobalFinanceResponse'
 import { DataStateNotice } from '../components/DataStateNotice';
 import { DashboardFilters } from '../components/DashboardFilters';
 import { MetricCard } from '../components/MetricCard';
-import { buildDashboardQuery, formatBytes, formatCount, formatPercent, formatPeriod, formatVnd, freshnessLabel, getApiErrorInfo, type DashboardFiltersValue, type MetricStatus } from '../lib/dashboard';
+import { CategoryVolumeBarChart } from '../components/CategoryVolumeBarChart';
+import { buildDashboardQuery, combineBytes, combineGapBytes, formatBytes, formatCount, formatPercent, formatPeriod, formatVnd, freshnessLabel, getApiErrorInfo, type DashboardFiltersValue, type MetricStatus } from '../lib/dashboard';
 
 /** Mặc định 7 ngày, không phải 24h -- một số tàu (vd Hai Nam 81) có độ trễ đẩy telemetry vài ngày,
  * mặc định 24h khiến trang gần như luôn rỗng ngay lần mở đầu tiên dù dữ liệu thật vẫn tồn tại. */
@@ -19,23 +20,6 @@ function gapStatus(pct: number | null | undefined): MetricStatus {
     if (abs <= 10) return 'healthy';
     if (abs <= 30) return 'warning';
     return 'critical';
-}
-
-/** Tổng quan chỉ cần data quy về 1 chiều — download/upload tách riêng để vào trang chi tiết từng
- * tàu (WAN & Reconciliation tab) mới cần. Cộng thẳng 2 chiều từ byte thô đã có, không cần API mới. */
-function combineBytes(dl: number | null | undefined, ul: number | null | undefined): number | null {
-    if (dl == null && ul == null) return null;
-    return (dl ?? 0) + (ul ?? 0);
-}
-
-/** Gộp gap 2 chiều đã tính sẵn (đúng, null-safe) từ backend thay vì tự trừ lại counted -- tránh
- * lệch quy ước null giữa "không có zone nào" và "1 zone = 0 byte thật". */
-function combineGapBytes(measuredDl: number | null | undefined, measuredUl: number | null | undefined, gapDlBytes: number | null | undefined, gapUlBytes: number | null | undefined): { bytes: number | null; pct: number | null } {
-    if (gapDlBytes == null || gapUlBytes == null) return { bytes: null, pct: null };
-    const bytes = gapDlBytes + gapUlBytes;
-    const measured = combineBytes(measuredDl, measuredUl);
-    const pct = measured !== null && measured !== 0 ? Math.round((bytes / measured) * 1000) / 10 : null;
-    return { bytes, pct };
 }
 
 /**
@@ -102,9 +86,22 @@ export const GlobalDashboard: React.FC = () => {
     const meta = response?.meta;
     const fleet = data?.fleet;
     const total = formatBytes(fleet?.total_bytes);
-    const crewTotal = formatBytes(combineBytes(fleet?.crew?.port_download_bytes, fleet?.crew?.port_upload_bytes));
-    const businessTotal = formatBytes(combineBytes(fleet?.business?.download_bytes, fleet?.business?.upload_bytes));
-    const managementTotal = formatBytes(combineBytes(fleet?.management?.download_bytes, fleet?.management?.upload_bytes));
+    const crewBytes = combineBytes(fleet?.crew?.port_download_bytes, fleet?.crew?.port_upload_bytes);
+    const businessBytes = combineBytes(fleet?.business?.download_bytes, fleet?.business?.upload_bytes);
+    const managementBytes = combineBytes(fleet?.management?.download_bytes, fleet?.management?.upload_bytes);
+    const crewTotal = formatBytes(crewBytes);
+    const businessTotal = formatBytes(businessBytes);
+    const managementTotal = formatBytes(managementBytes);
+    const zoneChartItems = [
+        { label: 'CREW', bytes: crewBytes },
+        { label: 'BUSINESS', bytes: businessBytes },
+        { label: 'MANAGEMENT', bytes: managementBytes },
+    ];
+    const shipChartItems = (data?.ships ?? [])
+        .map(ship => ({ label: ship.ship_name ?? ship.ship_code ?? ship.ship_id ?? '?', bytes: combineBytes(ship.wan_download_bytes, ship.wan_upload_bytes) }))
+        .filter(item => item.bytes !== null)
+        .sort((a, b) => (b.bytes ?? 0) - (a.bytes ?? 0))
+        .slice(0, 12);
 
     const fleetWanGap = combineGapBytes(fleet?.wan?.download_bytes, fleet?.wan?.upload_bytes, fleet?.gaps?.wan_download_gap_bytes, fleet?.gaps?.wan_upload_gap_bytes);
     const fleetCrewGap = combineGapBytes(fleet?.crew?.port_download_bytes, fleet?.crew?.port_upload_bytes, fleet?.gaps?.crew_download_gap_bytes, fleet?.gaps?.crew_upload_gap_bytes);
@@ -120,11 +117,6 @@ export const GlobalDashboard: React.FC = () => {
 
     return (
         <div>
-            <div className="top-bar">
-                <div><h1>Tổng quan</h1><p className="page-subtitle">Tổng data thật và độ lệch (gap) toàn hạm đội — gộp từ đúng công thức đối soát đang chạy ở cấp từng tàu.</p></div>
-                <span className="freshness-indicator">{freshnessLabel(meta)}</span>
-            </div>
-
             <DashboardFilters value={filters} onChange={setFilters} onApply={() => void fetchData()} loading={loading} />
 
             {error && (
@@ -158,17 +150,20 @@ export const GlobalDashboard: React.FC = () => {
 
                     <section className="glass-panel dashboard-section" style={{ marginTop: 20 }}>
                         <div className="section-heading"><div><h2>Theo zone</h2><p>Tổng data thật theo từng nhóm accounting toàn hạm đội.</p></div></div>
-                        <div className="table-shell">
-                            <table className="data-table">
-                                <thead><tr><th>Zone</th><th>Tổng data</th></tr></thead>
-                                <tbody>
-                                    <tr><td>CREW</td><td>{crewTotal.value} {crewTotal.unit}</td></tr>
-                                    <tr><td>BUSINESS</td><td>{businessTotal.value} {businessTotal.unit}</td></tr>
-                                    <tr><td>MANAGEMENT</td><td>{managementTotal.value} {managementTotal.unit}</td></tr>
-                                </tbody>
-                            </table>
+                        <CategoryVolumeBarChart items={zoneChartItems} />
+                        <div className="chip-list" style={{ marginTop: 10 }}>
+                            <span className="usage-chip">CREW: {crewTotal.value} {crewTotal.unit}</span>
+                            <span className="usage-chip">BUSINESS: {businessTotal.value} {businessTotal.unit}</span>
+                            <span className="usage-chip">MANAGEMENT: {managementTotal.value} {managementTotal.unit}</span>
                         </div>
                     </section>
+
+                    {shipChartItems.length > 0 && (
+                        <section className="glass-panel dashboard-section" style={{ marginTop: 20 }}>
+                            <div className="section-heading"><div><h2>Tổng data theo tàu (WAN)</h2><p>Top {shipChartItems.length} tàu tiêu thụ nhiều data nhất trong khoảng thời gian đã chọn.</p></div></div>
+                            <CategoryVolumeBarChart items={shipChartItems} barColor="#3b82f6" />
+                        </section>
+                    )}
 
                     <section className="glass-panel dashboard-section" style={{ marginTop: 20 }}>
                         <div className="section-heading"><div><h2>Độ lệch theo từng tàu</h2><p>Sắp theo mức lệch giảm dần — tàu lệch nhiều nhất hiện lên đầu, thường là dấu hiệu thiếu cấu hình đếm 1 zone (vd chưa gán accounting_group cho interface CREW/BUSINESS). Bấm vào tàu để xem chi tiết download/upload riêng.</p></div><span>{formatCount(data.ships?.length)} tàu</span></div>

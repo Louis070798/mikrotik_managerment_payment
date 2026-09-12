@@ -7,7 +7,7 @@ import type { ShipItem } from '../api/models/ShipItem';
 import type { Tenant } from '../api/models/Tenant';
 import { Router, Activity, AlertCircle, RefreshCw, Circle, CheckCircle2 } from 'lucide-react';
 import { SecretReveal } from '../components/SecretReveal';
-import { getApiErrorInfo } from '../lib/dashboard';
+import { combineBytes, formatBytes, getApiErrorInfo } from '../lib/dashboard';
 import { buildFleetConfigFromOptions, DEFAULT_FLEET_CONFIG_OPTIONS, type FleetConfigOptions, type WanMode } from '../lib/routerosConfigTemplate';
 
 const DEFAULT_AREA_CODE = 'DEFAULT';
@@ -30,6 +30,13 @@ export const Devices: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [busyDeviceId, setBusyDeviceId] = useState('');
+
+    // Tong dung luong (download+upload gop, 30 ngay gan nhat) tung thiet bi -- fetch rieng SAU khi
+    // co danh sach thiet bi (N request song song, N nho vi day la so thiet bi 1 ham doi thuc te,
+    // khong phai bang lon can 1 endpoint tong hop rieng). null = chua co interface_counter_deltas
+    // nao (INSUFFICIENT_DATA that hoac loi mang) -- hien "Chưa có dữ liệu", KHONG hien 0.
+    const [deviceUsageBytes, setDeviceUsageBytes] = useState<Record<string, number | null>>({});
+    const [usageLoading, setUsageLoading] = useState(false);
 
     // Wizard: bước 1 (tàu + thiết bị) -> bước 2 (cấu hình router) -> bước 3 (tokens + xuất cấu hình).
     const [wizardOpen, setWizardOpen] = useState(false);
@@ -74,11 +81,49 @@ export const Devices: React.FC = () => {
     // oxlint-disable-next-line react/set-state-in-effect
     useEffect(() => { void fetchDevices(); }, [fetchDevices]);
 
+    const fetchDeviceUsage = useCallback(async (list: Device[]) => {
+        const ids = list.map(d => d.id).filter((id): id is string => !!id);
+        if (ids.length === 0) return;
+        setUsageLoading(true);
+        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const results = await Promise.allSettled(ids.map(id => InventoryService.getDevicesTraffic({ deviceId: id, from })));
+        const next: Record<string, number | null> = {};
+        results.forEach((result, i) => {
+            next[ids[i]] = result.status === 'fulfilled' ? combineBytes(result.value.data?.wan?.download_bytes, result.value.data?.wan?.upload_bytes) : null;
+        });
+        setUsageLoading(false);
+        // oxlint-disable-next-line react/set-state-in-effect
+        setDeviceUsageBytes(next);
+    }, []);
+
+    // oxlint-disable-next-line react/set-state-in-effect
+    useEffect(() => { if (devices.length > 0) void fetchDeviceUsage(devices); }, [devices, fetchDeviceUsage]);
+
+    const deleteDevice = async (device: Device) => {
+        if (!device.id) return;
+        if (!window.confirm(`Xoá thiết bị "${device.name ?? device.code}"? Toàn bộ cấu hình, token và lịch sử traffic gắn với thiết bị này sẽ không còn hiển thị ở đâu nữa.`)) return;
+        setBusyDeviceId(device.id);
+        try {
+            await InventoryService.deleteDevices({ deviceId: device.id });
+            await fetchDevices();
+        } catch (err) {
+            setError(getApiErrorInfo(err).message);
+        } finally {
+            setBusyDeviceId('');
+        }
+    };
+
+    // Moi tau chi duoc gan DUNG 1 thiet bi Smartbox (backend chan luon o devices.service.ts) --
+    // loc san danh sach tau con "trong" (chua co thiet bi nao) o day de nguoi dung khong chon
+    // nham 1 tau da co roi, thay vi de rot xuong loi 409 sau khi dien het form.
+    const shipIdsWithDevice = useMemo(() => new Set(devices.map(d => d.ship_id).filter((id): id is string => !!id)), [devices]);
+    const availableShips = useMemo(() => ships.filter(s => s.id && !shipIdsWithDevice.has(s.id)), [ships, shipIdsWithDevice]);
+
     const openWizard = () => {
         setWizardStep(1);
         setWizardError('');
-        setShipMode(ships.length > 0 ? 'existing' : 'new');
-        setSelectedShipId(ships[0]?.id ?? '');
+        setShipMode(availableShips.length > 0 ? 'existing' : 'new');
+        setSelectedShipId(availableShips[0]?.id ?? '');
         setShipForm(emptyShipForm);
         setDeviceForm(emptyDeviceForm);
         setConfigOptions(DEFAULT_FLEET_CONFIG_OPTIONS);
@@ -280,6 +325,7 @@ export const Devices: React.FC = () => {
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Trạng thái</th>
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Model</th>
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Năm sản xuất / OS</th>
+                                    <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Tổng dung lượng (30 ngày)</th>
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600', textAlign: 'right' }}>Thao tác</th>
                                 </tr>
                             </thead>
@@ -310,6 +356,15 @@ export const Devices: React.FC = () => {
                                         <td style={{ padding: '16px 20px', color: '#475569' }}>
                                             {device.routeros_version || '-'}
                                         </td>
+                                        <td style={{ padding: '16px 20px', color: '#475569' }}>
+                                            {!device.id || (usageLoading && !(device.id in deviceUsageBytes)) ? (
+                                                <span style={{ color: '#94a3b8' }}>Đang tải…</span>
+                                            ) : deviceUsageBytes[device.id] == null ? (
+                                                <span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>
+                                            ) : (
+                                                <strong style={{ color: '#0f172a' }}>{formatBytes(deviceUsageBytes[device.id]).value} {formatBytes(deviceUsageBytes[device.id]).unit}</strong>
+                                            )}
+                                        </td>
                                         <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                                                 <button disabled={busyDeviceId === device.id} onClick={() => void toggleMaintenance(device)} style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
@@ -318,6 +373,9 @@ export const Devices: React.FC = () => {
                                                 <Link to={`/devices/${device.id}`} style={{ background: '#f0f9ff', color: '#0ea5e9', border: '1px solid #bae6fd', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', textDecoration: 'none' }}>
                                                     Chi tiết
                                                 </Link>
+                                                <button disabled={busyDeviceId === device.id} onClick={() => void deleteDevice(device)} style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                                                    {busyDeviceId === device.id ? 'Đang xoá…' : 'Xoá'}
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -341,7 +399,7 @@ export const Devices: React.FC = () => {
                         {wizardStep === 1 && (
                             <form onSubmit={submitStep1} style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
                                 <div className="tab-row" role="tablist">
-                                    <button type="button" role="tab" aria-selected={shipMode === 'existing'} className={shipMode === 'existing' ? 'active' : ''} onClick={() => setShipMode('existing')} disabled={ships.length === 0}>Tàu có sẵn</button>
+                                    <button type="button" role="tab" aria-selected={shipMode === 'existing'} className={shipMode === 'existing' ? 'active' : ''} onClick={() => setShipMode('existing')} disabled={availableShips.length === 0}>Tàu có sẵn</button>
                                     <button type="button" role="tab" aria-selected={shipMode === 'new'} className={shipMode === 'new' ? 'active' : ''} onClick={() => setShipMode('new')}>Tạo tàu mới</button>
                                 </div>
 
@@ -349,8 +407,9 @@ export const Devices: React.FC = () => {
                                     <label className="filter-control"><span>Tàu</span>
                                         <select className="filter-select" required value={selectedShipId} onChange={e => setSelectedShipId(e.target.value)}>
                                             <option value="">-- chọn tàu --</option>
-                                            {ships.map(s => <option key={s.id} value={s.id}>{s.name ?? s.code}</option>)}
+                                            {availableShips.map(s => <option key={s.id} value={s.id}>{s.name ?? s.code}</option>)}
                                         </select>
+                                        <span className="muted-text" style={{ fontSize: 12 }}>Chỉ hiện tàu chưa có thiết bị nào — mỗi tàu chỉ được gán đúng 1 Smartbox.{ships.length > availableShips.length ? ` (${ships.length - availableShips.length} tàu đã có thiết bị, không hiện ở đây)` : ''}</span>
                                     </label>
                                 ) : (
                                     <>

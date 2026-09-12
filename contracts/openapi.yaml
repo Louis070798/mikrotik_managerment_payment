@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: MikroTik Centralized Fleet Management API
-  version: 1.20.0
-  description: 'OpenAPI contract for Fleet Management API. v1.20.0 (2026-09-05): CrewUser them package/subscription_status/quota_used_bytes/expires_at -- gan goi cuoc that (subscribers.package_id) vao danh sach user CREW theo tung tau, truoc day chi co du lieu RADIUS session (byte/session), khong biet user dang dung goi nao. GET /ships/{shipId}/crew/users gio liet ke TAT CA subscriber gan voi thiet bi cua tau nay (ke ca chua tung ket noi RADIUS lan nao), khong chi nhung username da xuat hien trong radius_sessions. v1.19.0 (2026-09-05): them GET /dashboard/global/finance -- bao cao tai chinh toan ham doi tu packages.price_vnd + subscribers (KHONG phai doanh thu da thu, he thong chua co bang hoa don/thanh toan): tong gia tri cac goi dang ACTIVE, phan bo trang thai (active/suspended/expired), sap het han trong N ngay kem gia tri "at risk", breakdown theo goi/tau/dai ly. v1.18.0 (2026-09-05): them GET /dashboard/global/reconciliation -- gop cong thuc computeGap() dang co o cap tung tau len toan ham doi (tong byte WAN/CREW/BUSINESS/MANAGEMENT cong don qua tat ca tau cho "tong data", breakdown do lech tung tau sap theo |gap| giam dan cho "do lech"). Thay the trang Tong quan cu (chi dem inventory, traffic luon null) bang dashboard nay. v1.17.1 (2026-09-05): ZeroTierMember.online doi thanh 3 trang thai that (true/false/null) thay vi 2 -- null khi chua tung thay ket noi nao (khong du can cu), khac voi false (tung ket noi, hien khong active). v1.17.0 (2026-09-05): ZeroTierMember them name that (luu rieng bang zerotier_member_labels moi -- controller khong co field nay) va online that (suy tu GET /peer that, khong phai gia dinh). ZeroTierUpdateMemberRequest them name de dat/xoa ten. v1.16.0 (2026-09-05): RADIUS tu chi co Accounting thanh full Access+Accounting that -- them POST/DELETE /subscribers/{subscriberId}/password (cap/thu hoi mat khau RADIUS that qua scrypt, backend tu xac thuc Access-Request PAP, tra Mikrotik-Rate-Limit theo goi cuoc, kiem tra status/expires_at/quota that), Subscriber them password_configured/password_issued_at. Them POST /ships/{shipId}/crew/users/{username}/sessions/{sessionId}/disconnect -- CoA/Disconnect-Request that (RFC 5176) ngat phien tu router. v1.15.0 (2026-09-05): ZeroTier tu chi doc thanh full CRUD that qua Controller API -- them POST /zerotier/networks (tao network moi), GET/PATCH/DELETE /zerotier/networks/{networkId} (chi tiet IP pool/route/DNS/auto-assign, sua, xoa), PATCH/DELETE /zerotier/networks/{networkId}/members/{memberId} (cap phep/thu hoi/gan IP tay, xoa thanh vien). Sua mo ta ZeroTierMember.name cho dung thuc te (controller chuan khong co field nay, luon null). v1.14.0 (2026-09-04): them GET /zerotier/networks + GET /zerotier/networks/{networkId}/members -- proxy toi ZeroTier controller API that (dia chi/secret lay qua service_endpoints "zerotier.controller" + secret_ref, ADR-04/05, khong hard-code IP/token). v1.13.0 (2026-09-02): Ship them tenant_id (dai ly/cong ty quan ly tau, tuy chon). Device them radius_secret_configured/radius_secret_issued_at, va POST/DELETE /devices/{deviceId}/radius-secret -- sinh RADIUS secret that ngau nhien qua EnvSecretStore (TAM THOI, ADR-05), tu gan credential_ref, tra secret 1 lan duy nhat, doi xung voi push-key da co san. v1.12.0 (2026-09-02): CrewUsersResponse them billing_reconciliation (doi chieu tong byte NetFlow da gan username voi radius_sessions that -- muc do phu, khong tu co gian so). BusinessFlowsResponse them by_app/by_domain (SUM byte that theo dich vu/ten mien da phan loai qua DNS log collector) va mo rong enum classification_method them DNS -- bo phan loai DNS that (RADIUS Accounting UDP + NetFlow v9 UDP + DNS syslog UDP, xem service-catalog.ts/classifier.ts) thay the gia tri UNKNOWN cung ghi. v1.11.0 (2026-09-01): Device them router_config_text/router_config_updated_at -- luu nguyen van RouterOS config de tham khao tren tab Ket noi truc tiep (server khong bao gio tu thuc thi). Sua loi YAML anchor &id100 bi trung ten (ip_address doi thanh &deviceIpAddress) tung lam hong enum cua Subscriber.status. v1.10.0 (2026-09-01): DeviceTraffic them reconciliation (counted CREW+BUSINESS+MANAGEMENT + gap bytes/pct so voi WAN) -- doi soat tong data thuc te da len server qua push voi tong da gan nhan, cung cong thuc computeGap() da dung o Reconciliation cap tau. v1.9.0 (2026-09-01): DeviceInterfaceTraffic them latest_sample (counter tho gan nhat: rx/tx bytes cong don + packets/errors/drops) tren moi interface va last_push (identity MikroTik tu bao) o cap thiet bi -- hien thi day du nhung gi router thuc su gui len. v1.8.0 (2026-09-01): them GET /devices/{deviceId}/interfaces/traffic -- bandwidth + tong data theo TUNG interface rieng le (khac .../traffic chi gop theo 4 nhom), month_total reset tu nhien vao 00:00 UTC ngay 1 hang thang. v1.7.0 (2026-09-01): them ip_address/push_key_configured/push_key_issued_at tren Device, va POST/DELETE /devices/{deviceId}/push-key + POST /devices/{deviceId}/telemetry-push -- MikroTik tu day telemetry len server 1 chieu (khong luu mat khau router that, khong AuthStubGuard, xac thuc bang X-Device-Api-Key rieng cua thiet bi). v1.6.0 (2026-09-01): them GET /devices/{deviceId}/traffic (WAN total + rate theo bucket) va nas_device_id filter tren GET /subscribers. v1.5.0 (2026-09-01): them Tenant/Package/Subscriber (PPPoE/Hotspot) Phase 1 -- xem docs/backend/02-DATABASE_DESIGN.md Sec.1.6. v1.3.0 (2026-08-25): bo sung Phase 3 raw telemetry ingest, persistence, deduplication va health metadata. Additive-only, khong doi/xoa field cu.'
+  version: 1.27.0
+  description: 'OpenAPI contract for Fleet Management API. v1.27.0 (2026-09-12): BO tinh nang "cap mat khau tu dong" (sinh ngau nhien) tren toan he thong -- Subscriber va Tenant. SubscriberCreateRequest/TenantCreateRequest gio yeu cau password (admin tu go khi tao). POST /subscribers/{subscriberId}/password va POST /tenants/{tenantId}/password gio nhan requestBody.password (admin tu go) thay vi tu sinh -- KHONG con tra plaintext ve trong response nao nua (ca luc tao lan luc dat lai), vi admin da biet minh vua go gi. v1.26.0 (2026-09-12): Subscriber them display_name/notes -- thuan tuy hien thi cho admin nhan dien (ten hien thi/ho ten, ghi chu), KHONG dung trong xac thuc RADIUS (van chi dung username). v1.25.0 (2026-09-12): POST /subscribers gio luon tu cap tai khoan dang nhap that (mat khau) NGAY trong response tao subscriber, khong con can goi POST /subscribers/{subscriberId}/password rieng ngay sau nua (van giu endpoint do de cap lai/reset sau nay). Them POST /subscribers/{subscriberId}/reset-quota -- reset quota_used_bytes ve 0 (tac vu quan ly rieng, co audit log rieng subscriber.reset_quota). v1.24.0 (2026-09-08): POST /devices gio chan tao thiet bi thu 2 cho cung 1 tau (409 SHIP_ALREADY_HAS_DEVICE) -- moi tau chi duoc gan dung 1 thiet bi Smartbox. v1.23.0 (2026-09-07): POST /tenants gio luon tu cap tai khoan dang nhap (username + mat khau) NGAY trong response tao tenant, khong con can goi POST /tenants/{tenantId}/password rieng ngay sau nua (van giu endpoint do de cap lai/reset sau nay). v1.22.0 (2026-09-07): Tenant tro thanh 1 tai khoan dang nhap that (nang cap dau tien tu AuthStubGuard placeholder) -- them POST/DELETE /tenants/{tenantId}/password (sinh username tu code + mat khau scrypt, tra mat khau that 1 lan qua TenantPasswordResponse). POST /auth/login gio xac thuc that neu username khop 1 tenant da cap mat khau (tra 401 UNAUTHENTICATED neu sai mat khau -- KHONG con fallback ve admin trong truong hop nay); username khong khop tenant nao van giu hanh vi cu (chap nhan bat ky mat khau, vai tro admin) de khong pha luong dev. AuthSuccessResponse them id/name/role/permissions (CSV quyen thuc te cho phien, "*" cho admin, danh sach rieng cho tenant). Tenant them username/password_configured/password_issued_at. GIOI HAN: quyen tenant la 1 whitelist chung toan he thong, CHUA loc du lieu theo tung tenant_id trong cac service khac. v1.21.0 (2026-09-06): them GET/PATCH /settings -- sua truc tiep 5 bien Tier-0 dong bang (env.schema.ts, ADR-04): DATABASE_CONTROL_URL (tach thanh host/port/database/username/password rieng, mat khau khong bao gio tra ve), RADIUS_AUTH_PORT, RADIUS_ACCT_PORT, NETFLOW_PORT, DNS_LOG_PORT, ZEROTIER_CONTROLLER_TOKEN. Ghi xuong .env + audit_logs (best-effort, hoat dong duoc ke ca khi DB mat ket noi -- dung de tu sua loi ket noi DB). Tra restart_required=true, KHONG tu restart. v1.20.0 (2026-09-05): CrewUser them package/subscription_status/quota_used_bytes/expires_at -- gan goi cuoc that (subscribers.package_id) vao danh sach user CREW theo tung tau, truoc day chi co du lieu RADIUS session (byte/session), khong biet user dang dung goi nao. GET /ships/{shipId}/crew/users gio liet ke TAT CA subscriber gan voi thiet bi cua tau nay (ke ca chua tung ket noi RADIUS lan nao), khong chi nhung username da xuat hien trong radius_sessions. v1.19.0 (2026-09-05): them GET /dashboard/global/finance -- bao cao tai chinh toan ham doi tu packages.price_vnd + subscribers (KHONG phai doanh thu da thu, he thong chua co bang hoa don/thanh toan): tong gia tri cac goi dang ACTIVE, phan bo trang thai (active/suspended/expired), sap het han trong N ngay kem gia tri "at risk", breakdown theo goi/tau/dai ly. v1.18.0 (2026-09-05): them GET /dashboard/global/reconciliation -- gop cong thuc computeGap() dang co o cap tung tau len toan ham doi (tong byte WAN/CREW/BUSINESS/MANAGEMENT cong don qua tat ca tau cho "tong data", breakdown do lech tung tau sap theo |gap| giam dan cho "do lech"). Thay the trang Tong quan cu (chi dem inventory, traffic luon null) bang dashboard nay. v1.17.1 (2026-09-05): ZeroTierMember.online doi thanh 3 trang thai that (true/false/null) thay vi 2 -- null khi chua tung thay ket noi nao (khong du can cu), khac voi false (tung ket noi, hien khong active). v1.17.0 (2026-09-05): ZeroTierMember them name that (luu rieng bang zerotier_member_labels moi -- controller khong co field nay) va online that (suy tu GET /peer that, khong phai gia dinh). ZeroTierUpdateMemberRequest them name de dat/xoa ten. v1.16.0 (2026-09-05): RADIUS tu chi co Accounting thanh full Access+Accounting that -- them POST/DELETE /subscribers/{subscriberId}/password (cap/thu hoi mat khau RADIUS that qua scrypt, backend tu xac thuc Access-Request PAP, tra Mikrotik-Rate-Limit theo goi cuoc, kiem tra status/expires_at/quota that), Subscriber them password_configured/password_issued_at. Them POST /ships/{shipId}/crew/users/{username}/sessions/{sessionId}/disconnect -- CoA/Disconnect-Request that (RFC 5176) ngat phien tu router. v1.15.0 (2026-09-05): ZeroTier tu chi doc thanh full CRUD that qua Controller API -- them POST /zerotier/networks (tao network moi), GET/PATCH/DELETE /zerotier/networks/{networkId} (chi tiet IP pool/route/DNS/auto-assign, sua, xoa), PATCH/DELETE /zerotier/networks/{networkId}/members/{memberId} (cap phep/thu hoi/gan IP tay, xoa thanh vien). Sua mo ta ZeroTierMember.name cho dung thuc te (controller chuan khong co field nay, luon null). v1.14.0 (2026-09-04): them GET /zerotier/networks + GET /zerotier/networks/{networkId}/members -- proxy toi ZeroTier controller API that (dia chi/secret lay qua service_endpoints "zerotier.controller" + secret_ref, ADR-04/05, khong hard-code IP/token). v1.13.0 (2026-09-02): Ship them tenant_id (dai ly/cong ty quan ly tau, tuy chon). Device them radius_secret_configured/radius_secret_issued_at, va POST/DELETE /devices/{deviceId}/radius-secret -- sinh RADIUS secret that ngau nhien qua EnvSecretStore (TAM THOI, ADR-05), tu gan credential_ref, tra secret 1 lan duy nhat, doi xung voi push-key da co san. v1.12.0 (2026-09-02): CrewUsersResponse them billing_reconciliation (doi chieu tong byte NetFlow da gan username voi radius_sessions that -- muc do phu, khong tu co gian so). BusinessFlowsResponse them by_app/by_domain (SUM byte that theo dich vu/ten mien da phan loai qua DNS log collector) va mo rong enum classification_method them DNS -- bo phan loai DNS that (RADIUS Accounting UDP + NetFlow v9 UDP + DNS syslog UDP, xem service-catalog.ts/classifier.ts) thay the gia tri UNKNOWN cung ghi. v1.11.0 (2026-09-01): Device them router_config_text/router_config_updated_at -- luu nguyen van RouterOS config de tham khao tren tab Ket noi truc tiep (server khong bao gio tu thuc thi). Sua loi YAML anchor &id100 bi trung ten (ip_address doi thanh &deviceIpAddress) tung lam hong enum cua Subscriber.status. v1.10.0 (2026-09-01): DeviceTraffic them reconciliation (counted CREW+BUSINESS+MANAGEMENT + gap bytes/pct so voi WAN) -- doi soat tong data thuc te da len server qua push voi tong da gan nhan, cung cong thuc computeGap() da dung o Reconciliation cap tau. v1.9.0 (2026-09-01): DeviceInterfaceTraffic them latest_sample (counter tho gan nhat: rx/tx bytes cong don + packets/errors/drops) tren moi interface va last_push (identity MikroTik tu bao) o cap thiet bi -- hien thi day du nhung gi router thuc su gui len. v1.8.0 (2026-09-01): them GET /devices/{deviceId}/interfaces/traffic -- bandwidth + tong data theo TUNG interface rieng le (khac .../traffic chi gop theo 4 nhom), month_total reset tu nhien vao 00:00 UTC ngay 1 hang thang. v1.7.0 (2026-09-01): them ip_address/push_key_configured/push_key_issued_at tren Device, va POST/DELETE /devices/{deviceId}/push-key + POST /devices/{deviceId}/telemetry-push -- MikroTik tu day telemetry len server 1 chieu (khong luu mat khau router that, khong AuthStubGuard, xac thuc bang X-Device-Api-Key rieng cua thiet bi). v1.6.0 (2026-09-01): them GET /devices/{deviceId}/traffic (WAN total + rate theo bucket) va nas_device_id filter tren GET /subscribers. v1.5.0 (2026-09-01): them Tenant/Package/Subscriber (PPPoE/Hotspot) Phase 1 -- xem docs/backend/02-DATABASE_DESIGN.md Sec.1.6. v1.3.0 (2026-08-25): bo sung Phase 3 raw telemetry ingest, persistence, deduplication va health metadata. Additive-only, khong doi/xoa field cu.'
 servers:
 - url: /api/v1
 paths:
@@ -39,6 +39,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MeResponse'
+  /settings:
+    get:
+      summary: Xem cau hinh Tier-0 hien tai (database, cong RADIUS/NetFlow/DNS, ZeroTier token)
+      description: Doc truc tiep tu .env hien hanh (khong qua DB) -- hoat dong duoc ke ca khi database dang mat ket noi. Mat khau/token khong bao gio tra ve, chi co *_configured (boolean).
+      tags:
+      - Settings
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    patch:
+      summary: Sua cau hinh Tier-0 (ghi xuong .env, can restart backend de ap dung)
+      description: Chi sua cac bien Tier-0 dong bang da co san trong env.schema.ts (ADR-04) -- KHONG tao bien moi. Ghi xuong file .env cua backend + audit_logs (best-effort, khong chan neu DB dang mat ket noi -- dung de sua chinh loi ket noi DB). Tra restart_required=true neu co thay doi.
+      tags:
+      - Settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+        '400':
+          description: VALIDATION_FAILED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '403':
+          description: FORBIDDEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
   /dashboard/global:
     get:
       summary: Global dashboard metrics
@@ -998,6 +1047,19 @@ paths:
         '403': *id004
         '404':
           description: SHIP_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    nullable: true
+                  meta:
+                    $ref: '#/components/schemas/BaseMeta'
+                  error:
+                    $ref: '#/components/schemas/ErrorDetails'
+        '409':
+          description: RESOURCE_CONFLICT (trung ma thiet bi trong cung 1 tau) hoac SHIP_ALREADY_HAS_DEVICE (tau da co san 1 thiet bi -- moi tau chi duoc gan dung 1 Smartbox)
           content:
             application/json:
               schema:
@@ -2272,7 +2334,8 @@ paths:
                     nullable: true
         '403': *id015
     post:
-      summary: Tao tenant moi
+      summary: Tao tenant moi (tu cap luon tai khoan dang nhap -- username + mat khau) -- mat khau do ADMIN TU GO trong requestBody
+      description: 'Tenant la 1 tai khoan dang nhap that (POST /auth/login) -- luon sinh username (tu code) NGAY luc tao. Mat khau do admin nhap truc tiep qua requestBody.password, khong con tu sinh ngau nhien nua. Server chi giu ban bam, khong bao gio tra lai qua response nao.'
       tags:
       - Tenants
       parameters:
@@ -2400,6 +2463,58 @@ paths:
                     $ref: '#/components/schemas/BaseMeta'
                   error:
                     $ref: '#/components/schemas/ErrorDetails'
+  /tenants/{tenantId}/password:
+    post:
+      summary: Dat mat khau dang nhap cho tenant (sinh username tu code neu chua co) bang mat khau ADMIN TU GO
+      description: 'Nang cap tu placeholder Auth/RBAC (Tenants.tsx) -- tenant nay tro thanh 1 tai khoan dang nhap that qua POST /auth/login. Mat khau do admin nhap trong requestBody, khong con tu sinh ngau nhien -- server chi giu ban bam scrypt, khong tra lai plaintext.'
+      tags:
+      - Tenants
+      parameters:
+      - *id014
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - password
+              properties:
+                password:
+                  type: string
+                  minLength: 4
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantPasswordResponse'
+        '403': *id015
+        '404': *id018
+    delete:
+      summary: Thu hoi tai khoan dang nhap cua tenant (khong xoa tenant)
+      tags:
+      - Tenants
+      parameters:
+      - *id014
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '204':
+          description: Deleted
+        '403': *id015
+        '404': *id018
   /packages:
     get:
       summary: List goi cuoc (loc theo tenant_id)
@@ -2610,7 +2725,8 @@ paths:
                     nullable: true
         '403': *id015
     post:
-      summary: Tao subscriber moi (gan tenant + goi cuoc, tuy chon NAS)
+      summary: Tao subscriber moi (gan tenant + goi cuoc, tuy chon NAS) -- mat khau do ADMIN TU GO trong requestBody
+      description: Subscriber la 1 tai khoan dang nhap Hotspot/PPPoE that. Mat khau do admin nhap truc tiep qua requestBody.password, khong con tu sinh ngau nhien nua. Server chi giu ban bam, khong bao gio tra lai qua response nao.
       tags:
       - Subscribers
       parameters:
@@ -2765,10 +2881,10 @@ paths:
           description: Deleted
         '403': *id015
         '404': *id018
-  /subscribers/{subscriberId}/password:
+  /subscribers/{subscriberId}/reset-quota:
     post:
-      summary: Cap mat khau RADIUS moi cho subscriber
-      description: Sinh mat khau that ngau nhien, bam scrypt luu lai (backend/src/libs/password-hash/), tra plaintext DUY NHAT 1 LAN. RADIUS Access-Request (PAP) ke tiep tu router dung duoc ngay.
+      summary: Reset quota_used_bytes ve 0 cho subscriber
+      description: Tac vu quan ly rieng (khong phai 1 field PATCH thuong) -- danh cho tinh huong "cap lai/gia han dung luong" cho 1 user, co audit log rieng (subscriber.reset_quota).
       tags:
       - Subscribers
       parameters:
@@ -2779,6 +2895,50 @@ paths:
         schema:
           type: string
           format: uuid
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Subscriber'
+                  meta:
+                    $ref: '#/components/schemas/BaseMeta'
+                  error:
+                    allOf:
+                    - $ref: '#/components/schemas/ErrorDetails'
+                    nullable: true
+        '403': *id015
+        '404': *id018
+  /subscribers/{subscriberId}/password:
+    post:
+      summary: Dat mat khau RADIUS moi cho subscriber, do admin tu go
+      description: Mat khau lay tu requestBody.password (khong con tu sinh ngau nhien), bam scrypt luu lai (backend/src/libs/password-hash/). RADIUS Access-Request (PAP) ke tiep tu router dung duoc ngay.
+      tags:
+      - Subscribers
+      parameters:
+      - *id014
+      - in: path
+        name: subscriberId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - password
+              properties:
+                password:
+                  type: string
+                  minLength: 4
       responses:
         '201':
           description: Created
@@ -4309,6 +4469,18 @@ components:
           properties:
             token:
               type: string
+            id:
+              type: string
+            name:
+              type: string
+            role:
+              type: string
+              enum:
+              - admin
+              - tenant
+            permissions:
+              type: string
+              description: CSV quyen duoc cap cho phien nay -- '*' cho admin, danh sach cu the cho tenant (xem AuthService.TENANT_PERMISSIONS). Frontend gui lai dung gia tri nay qua header x-actor-permissions moi request.
         meta:
           $ref: '#/components/schemas/BaseMeta'
         error:
@@ -4329,6 +4501,81 @@ components:
           $ref: '#/components/schemas/BaseMeta'
         error:
           nullable: true
+    SettingsDatabase:
+      type: object
+      properties:
+        host:
+          type: string
+          nullable: true
+        port:
+          type: integer
+          nullable: true
+        database:
+          type: string
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        password_configured:
+          type: boolean
+    SettingsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            database:
+              $ref: '#/components/schemas/SettingsDatabase'
+            radius_auth_port:
+              type: integer
+            radius_acct_port:
+              type: integer
+            netflow_port:
+              type: integer
+            dns_log_port:
+              type: integer
+            zerotier_controller_token_configured:
+              type: boolean
+            restart_required:
+              type: boolean
+              description: Chi co o response cua PATCH -- true neu vua ghi thay doi xuong .env, can restart backend de ap dung.
+        meta:
+          $ref: '#/components/schemas/BaseMeta'
+        error:
+          nullable: true
+    SettingsUpdateRequest:
+      type: object
+      required:
+      - reason
+      properties:
+        database:
+          type: object
+          properties:
+            host:
+              type: string
+            port:
+              type: integer
+            database:
+              type: string
+            username:
+              type: string
+            password:
+              type: string
+              description: Rong/thieu = giu nguyen mat khau hien tai.
+        radius_auth_port:
+          type: integer
+        radius_acct_port:
+          type: integer
+        netflow_port:
+          type: integer
+        dns_log_port:
+          type: integer
+        zerotier_controller_token:
+          type: string
+          description: Rong/thieu = giu nguyen.
+        reason:
+          type: string
+          description: Bat buoc -- di thang vao audit_logs.
     GlobalReconciliationZoneBytes:
       type: object
       properties:
@@ -6276,17 +6523,44 @@ components:
         tax_id:
           type: string
           nullable: true
+        username:
+          type: string
+          nullable: true
+          description: Ten dang nhap that cua tenant (tu sinh tu code khi cap mat khau lan dau) -- null neu chua tung cap mat khau.
+        password_configured:
+          type: boolean
+          description: True neu tenant nay da co mat khau dang nhap that (xem POST .../password).
+        password_issued_at:
+          type: string
+          format: date-time
+          nullable: true
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
+    TenantPasswordResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            username:
+              type: string
+            issued_at:
+              type: string
+              format: date-time
+        meta:
+          $ref: '#/components/schemas/BaseMeta'
+        error:
+          nullable: true
     TenantCreateRequest:
       type: object
       required:
       - code
       - name
+      - password
       properties:
         parent_id:
           type: string
@@ -6296,6 +6570,10 @@ components:
           type: string
         name:
           type: string
+        password:
+          type: string
+          minLength: 4
+          description: Mat khau dang nhap that -- ADMIN TU GO khi tao tenant (khong con tu sinh ngau nhien). Server chi luu ban bam (scrypt), khong bao gio tra lai qua GET/PATCH.
         contact_name:
           type: string
           nullable: true
@@ -6438,6 +6716,13 @@ components:
           format: uuid
         username:
           type: string
+        display_name:
+          type: string
+          nullable: true
+          description: Ten hien thi/ho ten -- thuan tuy hien thi cho admin nhan dien, KHONG dung trong xac thuc RADIUS (van chi dung username).
+        notes:
+          type: string
+          nullable: true
         auth_type:
           type: string
           enum: &id102
@@ -6477,6 +6762,7 @@ components:
       required:
       - tenant_id
       - username
+      - password
       - auth_type
       - package_id
       - expires_at
@@ -6486,6 +6772,16 @@ components:
           format: uuid
         username:
           type: string
+        password:
+          type: string
+          minLength: 4
+          description: Mat khau dang nhap that -- ADMIN TU GO khi tao user (khong con tu sinh ngau nhien). Server chi luu ban bam (scrypt), khong bao gio tra lai qua GET/PATCH.
+        display_name:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
         auth_type:
           type: string
           enum: *id102
@@ -6502,6 +6798,12 @@ components:
     SubscriberUpdateRequest:
       type: object
       properties:
+        display_name:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
         auth_type:
           type: string
           enum: *id102
@@ -6538,11 +6840,8 @@ components:
           format: uuid
     SubscriberPasswordResponse:
       type: object
-      description: Mat khau RADIUS that cua subscriber -- CHI xuat hien trong response nay, khong bao gio doc lai duoc sau do.
+      description: Xac nhan da dat mat khau RADIUS cho subscriber -- mat khau do admin tu go trong requestBody, server khong bao gio tra lai plaintext.
       properties:
-        password:
-          type: string
-          description: Plaintext, hien mot lan duy nhat.
         issued_at:
           type: string
           format: date-time

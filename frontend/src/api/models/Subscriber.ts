@@ -9,6 +9,11 @@ export type Subscriber = {
     id?: string;
     tenant_id?: string;
     username?: string;
+    /**
+     * Ten hien thi/ho ten -- thuan tuy hien thi cho admin nhan dien, KHONG dung trong xac thuc RADIUS (van chi dung username).
+     */
+    display_name?: string | null;
+    notes?: string | null;
     auth_type?: Subscriber.auth_type;
     nas_device_id?: string | null;
     package_id?: string;

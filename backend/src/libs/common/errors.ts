@@ -35,6 +35,7 @@ export const ERROR_CATALOG = {
   RADIUS_SESSION_NOT_ACTIVE: { httpStatus: 409, retryable: false },
   AREA_HAS_SHIPS: { httpStatus: 409, retryable: false },
   SHIP_HAS_DEVICES: { httpStatus: 409, retryable: false },
+  SHIP_ALREADY_HAS_DEVICE: { httpStatus: 409, retryable: false },
   TENANT_HAS_DEPENDENTS: { httpStatus: 409, retryable: false },
   PACKAGE_IN_USE: { httpStatus: 409, retryable: false },
   DEVICE_PUSH_NOT_CONFIGURED: { httpStatus: 409, retryable: false },

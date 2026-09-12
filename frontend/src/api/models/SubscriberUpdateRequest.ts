@@ -3,6 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 export type SubscriberUpdateRequest = {
+    display_name?: string | null;
+    notes?: string | null;
     auth_type?: SubscriberUpdateRequest.auth_type;
     nas_device_id?: string | null;
     package_id?: string;

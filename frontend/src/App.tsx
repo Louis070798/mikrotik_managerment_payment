@@ -15,6 +15,7 @@ import { Users } from './pages/Users';
 import { SubscriberDetail } from './pages/SubscriberDetail';
 import { BulkAssign } from './pages/BulkAssign';
 import { Tenants } from './pages/Tenants';
+import { Settings } from './pages/Settings';
 import './index.css';
 import './lib/apiClient';
 
@@ -44,6 +45,7 @@ function App() {
             <Route path="/vpn" element={<VpnZeroTier />} />
             <Route path="/tenants" element={<Tenants />} />
             <Route path="/billing" element={<PagePlaceholder title="Hoá đơn" description="Quản lý thanh toán, hoá đơn tự động và tích hợp gateway thanh toán." />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>

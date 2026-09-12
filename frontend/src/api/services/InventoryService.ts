@@ -368,6 +368,7 @@ export class InventoryService {
                 400: `VALIDATION_FAILED`,
                 403: `FORBIDDEN -- thieu permission`,
                 404: `SHIP_NOT_FOUND`,
+                409: `RESOURCE_CONFLICT (trung ma thiet bi trong cung 1 tau) hoac SHIP_ALREADY_HAS_DEVICE (tau da co san 1 thiet bi -- moi tau chi duoc gan dung 1 Smartbox)`,
             },
         });
     }

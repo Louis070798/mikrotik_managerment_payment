@@ -5,6 +5,7 @@ import type { ZeroTierMember } from '../api/models/ZeroTierMember';
 import type { ZeroTierNetworkDetail } from '../api/models/ZeroTierNetworkDetail';
 import type { ZeroTierNetworkSummary } from '../api/models/ZeroTierNetworkSummary';
 import { formatCount, getApiErrorInfo, type MetricStatus } from '../lib/dashboard';
+import { useHeaderActions } from '../lib/headerActions';
 
 /** Dòng cảnh báo nhỏ gọn — thay cho DataStateNotice to khi chỉ cần báo lỗi ngắn + nút thử lại. */
 function InlineWarning({ message, onRetry }: { message: string; onRetry?: () => void }) {
@@ -375,13 +376,13 @@ export const VpnZeroTier: React.FC = () => {
     const authorizedMembers = members.filter(m => m.authorized === true).length;
     const onlineCount = members.filter(m => m.online).length;
 
+    useHeaderActions(
+        <button type="button" className="filter-apply" onClick={openCreate}><Plus size={14} /> Tạo network mới</button>,
+        [],
+    );
+
     return (
         <div>
-            <div className="top-bar">
-                <div><h1>ZeroTier</h1><p className="page-subtitle">Danh sách network + thành viên thật từ ZeroTier Controller API — không suy diễn, không dữ liệu mẫu.</p></div>
-                <button type="button" className="filter-apply" onClick={openCreate}><Plus size={14} /> Tạo network mới</button>
-            </div>
-
             {networksError?.code === 'ZEROTIER_NOT_CONFIGURED' ? (
                 <InlineWarning
                     message={`Chưa cấu hình ZeroTier controller: ${networksError.message} — đăng ký qua POST /api/v1/services/zerotier.controller/endpoints (service_type=ZEROTIER, host=10.149.79.186, port=9993, secret_ref="env:ZEROTIER_CONTROLLER_TOKEN").`}

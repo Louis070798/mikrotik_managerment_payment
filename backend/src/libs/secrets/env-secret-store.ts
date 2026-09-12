@@ -34,6 +34,22 @@ export class EnvSecretStore {
     this.removeLine(varName);
   }
 
+  /**
+   * Ghi 1 giá trị CỤ THỂ (không phải sinh ngẫu nhiên) — dùng cho Settings (DATABASE_CONTROL_URL,
+   * RADIUS_ACCT_PORT, ...). Các biến Tier-0 (env.schema.ts) chỉ được NestJS đọc 1 LẦN lúc bootstrap
+   * (AppConfigModule) nên set process.env ở đây không đổi hành vi tiến trình đang chạy — chỉ ghi
+   * xuống .env để lần restart kế tiếp áp dụng đúng.
+   */
+  set(varName: string, value: string): void {
+    process.env[varName] = value;
+    this.upsertLine(varName, value);
+  }
+
+  /** Đọc giá trị hiện tại (ưu tiên process.env, phòng khi 1 tiến trình khác vừa ghi .env). */
+  get(varName: string): string | undefined {
+    return process.env[varName];
+  }
+
   private readLines(): string[] {
     if (!existsSync(this.envPath)) return [];
     return readFileSync(this.envPath, 'utf8').split('\n');

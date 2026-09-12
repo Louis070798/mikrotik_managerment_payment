@@ -15,6 +15,15 @@ export type Tenant = {
     contact_email?: string | null;
     address?: string | null;
     tax_id?: string | null;
+    /**
+     * Ten dang nhap that cua tenant (tu sinh tu code khi cap mat khau lan dau) -- null neu chua tung cap mat khau.
+     */
+    username?: string | null;
+    /**
+     * True neu tenant nay da co mat khau dang nhap that (xem POST .../password).
+     */
+    password_configured?: boolean;
+    password_issued_at?: string | null;
     created_at?: string;
     updated_at?: string;
 };

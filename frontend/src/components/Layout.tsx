@@ -1,15 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Router, Users, BarChart2, Package, Layers, Shield, Network, Building2, FileText, Anchor } from 'lucide-react';
+import { LayoutDashboard, Router, Users, BarChart2, Package, Layers, Shield, Network, Building2, FileText, Anchor, Settings as SettingsIcon } from 'lucide-react';
+import { HeaderActionsContext } from '../lib/headerActions';
 
 export const Layout: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
+        localStorage.removeItem('permissions');
+        localStorage.removeItem('role');
+        localStorage.removeItem('actorName');
         navigate('/login');
     };
+
+    // Danh tinh THAT tu lan dang nhap gan nhat (xem Login.tsx + AuthService.login()) — trong khi
+    // chua co RBAC theo tung tenant, day van la dau hieu ro nhat "ai dang dung phien nay".
+    const actorName = localStorage.getItem('actorName') || 'Dev Actor';
+    const actorRole = localStorage.getItem('role') === 'tenant' ? 'tenant' : 'superadmin';
+    const actorInitials = actorName.split(/\s+/).filter(Boolean).slice(-2).map(w => w[0]).join('').toUpperCase() || '?';
 
     // Page Title based on route
     const getPageTitle = () => {
@@ -25,6 +36,7 @@ export const Layout: React.FC = () => {
         if (location.pathname === '/radius') return { breadcrumb: 'HẠ TẦNG / RADIUS', title: 'RADIUS / AAA' };
         if (location.pathname === '/vpn') return { breadcrumb: 'HẠ TẦNG / VPN', title: 'VPN ZeroTier' };
         if (location.pathname === '/tenants') return { breadcrumb: 'TỔ CHỨC / TENANT', title: 'Tenant & phân cấp' };
+        if (location.pathname === '/settings') return { breadcrumb: 'HỆ THỐNG / CÀI ĐẶT', title: 'Cài đặt' };
         return { breadcrumb: 'HỆ THỐNG', title: 'Trang chủ' };
     };
 
@@ -112,6 +124,15 @@ export const Layout: React.FC = () => {
                             <span>Hoá đơn</span>
                         </NavLink>
                     </div>
+
+                    {/* HỆ THỐNG */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#5b6b7a', paddingLeft: '8px', letterSpacing: '0.1em' }}>Hệ thống</div>
+                        <NavLink to="/settings" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
+                            <SettingsIcon size={18} />
+                            <span>Cài đặt</span>
+                        </NavLink>
+                    </div>
                 </div>
 
                 {/* Sidebar Footer */}
@@ -119,20 +140,20 @@ export const Layout: React.FC = () => {
                     <div style={{ background: '#252f38', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                             <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8a99a8' }}>ROUTEROS API</span>
-                            <div style={{ width: '6px', height: '6px', background: '#10b981', borderRadius: '50%' }}></div>
+                            <div className="status-live-dot" />
                         </div>
                         <div style={{ fontSize: '12px', color: '#a0aec0' }}>
                             Poller 15s - 7/8 kết nối
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={handleLogout} title="Logout">
-                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>
-                            TN
+                    <div className="sidebar-avatar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={handleLogout} title="Logout">
+                        <div className="sidebar-avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>
+                            {actorInitials}
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ color: '#fff', fontSize: '14px', fontWeight: '500' }}>Trần Nam</span>
-                            <span style={{ color: '#8a99a8', fontSize: '12px' }}>superadmin</span>
+                            <span style={{ color: '#fff', fontSize: '14px', fontWeight: '500' }}>{actorName}</span>
+                            <span style={{ color: '#8a99a8', fontSize: '12px' }}>{actorRole}</span>
                         </div>
                     </div>
                 </div>
@@ -163,11 +184,14 @@ export const Layout: React.FC = () => {
                         </div>
                     </div>
 
+                    {headerActions}
                 </header>
 
                 {/* Main Content Area */}
                 <main style={{ flex: 1, overflowY: 'auto', padding: '24px', background: '#f8fafc' }}>
-                    <Outlet />
+                    <HeaderActionsContext.Provider value={setHeaderActions}>
+                        <Outlet />
+                    </HeaderActionsContext.Provider>
                 </main>
             </div>
 
@@ -182,18 +206,61 @@ export const Layout: React.FC = () => {
                     border-radius: 6px;
                     color: #8a99a8;
                     text-decoration: none;
-                    transition: all 0.2s;
+                    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, color 0.2s, border-color 0.2s;
                     font-size: 14px;
                     border: 1px solid transparent;
+                }
+                .nav-item-custom svg {
+                    transition: transform 0.2s ease;
+                    flex-shrink: 0;
                 }
                 .nav-item-custom:hover {
                     background: rgba(255,255,255,0.05);
                     color: #fff;
+                    transform: translateX(3px);
+                }
+                .nav-item-custom:hover svg {
+                    transform: scale(1.12);
                 }
                 .nav-item-custom.active {
                     background: rgba(0, 150, 136, 0.1);
                     color: #009688;
                     border: 1px solid #009688;
+                }
+
+                /* Chấm "đang sống" cạnh ROUTEROS API -- vòng sáng lan toả nhẹ, kiểu "live indicator"
+                   phổ biến trên uiverse.io (tags/animation), báo hiệu poller vẫn đang chạy chứ
+                   không phải 1 chấm tĩnh vô nghĩa. */
+                .status-live-dot {
+                    width: 6px;
+                    height: 6px;
+                    background: #10b981;
+                    border-radius: 50%;
+                    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55);
+                    animation: statusLivePulse 2s ease-out infinite;
+                }
+                @keyframes statusLivePulse {
+                    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
+                    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+                }
+
+                /* Avatar logout -- trước đây cursor:pointer nhưng KHÔNG có phản hồi hover nào, người
+                   dùng không biết đây là nút bấm được. Thêm viền sáng + nhích nhẹ khi hover/bấm. */
+                .sidebar-avatar {
+                    transition: box-shadow 0.2s ease, transform 0.15s ease;
+                }
+                .sidebar-avatar-row:hover .sidebar-avatar {
+                    box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.35);
+                    transform: scale(1.05);
+                }
+                .sidebar-avatar-row:active .sidebar-avatar {
+                    transform: scale(0.96);
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .status-live-dot { animation: none; }
+                    .nav-item-custom, .nav-item-custom svg, .sidebar-avatar { transition: none; }
                 }
             `}} />
         </div>

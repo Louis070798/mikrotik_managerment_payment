@@ -23,9 +23,10 @@ import type { ShipItem } from '../api/models/ShipItem';
 import type { TelemetryHealthResponse } from '../api/models/TelemetryHealthResponse';
 import { AwaitingContract, DataStateNotice } from '../components/DataStateNotice';
 import { DashboardFilters } from '../components/DashboardFilters';
-import { FreshnessIndicator } from '../components/FreshnessIndicator';
 import { MetricCard } from '../components/MetricCard';
-import { buildDashboardQuery, formatBytes, formatCount, formatPeriod, formatPercent, formatRate, freshnessLabel, getApiErrorInfo, isRecord, type DashboardFiltersValue, type MetricStatus } from '../lib/dashboard';
+import { CategoryVolumeBarChart } from '../components/CategoryVolumeBarChart';
+import { VolumeSpeedChart } from '../components/VolumeSpeedChart';
+import { buildDashboardQuery, formatBytes, formatCount, formatPeriod, formatPercent, formatRate, freshnessLabel, getApiErrorInfo, isRecord, type DashboardFiltersValue, type DashboardGranularity, type MetricStatus } from '../lib/dashboard';
 import { DEFAULT_ROUTEROS_CONFIG_TEMPLATE } from '../lib/routerosConfigTemplate';
 
 type Tab = 'Overview' | 'WAN & Reconciliation' | 'Interfaces' | 'CREW' | 'BUSINESS' | 'Traffic Flow' | 'Devices' | 'Health & Events' | 'Configuration' | 'Backup';
@@ -432,11 +433,6 @@ export const ShipDashboard: React.FC = () => {
 
     return (
         <div className="ship-dashboard-layout">
-            <div className="top-bar">
-                <div><h1>Ship Operations</h1><p className="page-subtitle">A single-vessel view of connectivity, interface accounting and telemetry readiness.</p></div>
-                <FreshnessIndicator seconds={meta?.data_freshness_seconds ?? undefined} />
-            </div>
-
             <div className="ship-dashboard-columns">
                 <aside className="glass-panel ship-list-panel">
                     <div className="section-heading">
@@ -461,7 +457,7 @@ export const ShipDashboard: React.FC = () => {
                             <div className="tab-row" role="tablist">{tabs.map(tab => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
 
                             {activeTab === 'Overview' && <OverviewTab ship={ship} period={period} meta={meta} qualityValue={qualityValue} qualityStatus={qualityStatus} />}
-                            {activeTab === 'WAN & Reconciliation' && <ReconciliationTab mode={reconciliationMode} setMode={setReconciliationMode} response={reconciliation} error={reconciliationError} loading={reconciliationLoading} period={period} onRetry={() => void fetchReconciliation()} missingSources={errorMissingSources(reconciliationError)} />}
+                            {activeTab === 'WAN & Reconciliation' && <ReconciliationTab mode={reconciliationMode} setMode={setReconciliationMode} response={reconciliation} error={reconciliationError} loading={reconciliationLoading} period={period} granularity={filters.granularity} onRetry={() => void fetchReconciliation()} missingSources={errorMissingSources(reconciliationError)} />}
                             {activeTab === 'Interfaces' && <InterfacesTab interfaces={interfaces} loading={interfacesLoading} error={interfacesError} onRetry={() => setActiveTab('Overview')} />}
                             {activeTab === 'Devices' && <DevicesTab devices={devices} loading={devicesLoading} error={devicesError} />}
                             {activeTab === 'Health & Events' && <HealthTab health={health} healthHa={healthHa} telemetryHealth={telemetryHealth} alerts={alerts} loading={healthLoading} error={healthError} onRetry={() => void fetchHealth()} />}
@@ -538,15 +534,68 @@ function OverviewTab({ ship, period, meta, qualityValue, qualityStatus }: { ship
     </>;
 }
 
-function ReconciliationTab({ mode, setMode, response, error, loading, period, onRetry, missingSources }: { mode: ReconciliationMode; setMode: (mode: ReconciliationMode) => void; response?: ReconciliationResponse | ReconciliationByWanResponse; error?: ReturnType<typeof getApiErrorInfo>; loading: boolean; period: string; onRetry: () => void; missingSources: string[] }) {
+type ReconInterfaceRow = { interface_id?: string; name?: string; accounting_group?: string; download_bytes?: number | null; upload_bytes?: number | null; counter_resets?: number };
+type ReconZoneRow = { accounting_group?: string; download_bytes?: number | null; upload_bytes?: number | null };
+type ReconTimeseriesPoint = { bucket?: string; wan?: { download_bytes?: number | null; upload_bytes?: number | null } | null; crew?: { download_bytes?: number | null; upload_bytes?: number | null } | null; business?: { download_bytes?: number | null; upload_bytes?: number | null } | null; management?: { download_bytes?: number | null; upload_bytes?: number | null } | null };
+type ReconRawRecordRow = { id?: string; interface_id?: string; observed_at?: string; rx_bytes?: number | null; tx_bytes?: number | null; counter_source?: string };
+type ReconZoneKey = 'wan' | 'crew' | 'business' | 'management';
+const RECON_ZONE_LABEL: Record<ReconZoneKey, string> = { wan: 'WAN (tổng)', crew: 'CREW', business: 'BUSINESS', management: 'MANAGEMENT' };
+
+function ReconciliationTab({ mode, setMode, response, error, loading, period, granularity, onRetry, missingSources }: { mode: ReconciliationMode; setMode: (mode: ReconciliationMode) => void; response?: ReconciliationResponse | ReconciliationByWanResponse; error?: ReturnType<typeof getApiErrorInfo>; loading: boolean; period: string; granularity: DashboardGranularity; onRetry: () => void; missingSources: string[] }) {
+    const [timeseriesZone, setTimeseriesZone] = useState<ReconZoneKey>('wan');
     const summary = mode === 'summary' ? (response as ReconciliationResponse | undefined)?.data : undefined;
-    const items = mode !== 'summary' ? (response as ReconciliationByWanResponse | undefined)?.data?.items : undefined;
+    // Moi mode ngoai "summary" tra ve TEN FIELD RIENG (khong phai 1 "items" dung chung nhu contract
+    // co the goi y -- xem backend dashboard.service.ts): by-wan/by-interface -> interfaces[],
+    // by-zone -> zones[], timeseries -> points[], raw -> records[]. Doc dung ten thay vi field
+    // "items" khong ton tai -- loi cu khien ca 4 mode nay luon hien bang rong du API tra du lieu that.
+    const rawData = mode !== 'summary' ? (response as ReconciliationByWanResponse | undefined)?.data as Record<string, unknown> | undefined : undefined;
+    const interfaceRows = (rawData?.interfaces as ReconInterfaceRow[] | undefined) ?? [];
+    const zoneRows = (rawData?.zones as ReconZoneRow[] | undefined) ?? [];
+    const points = (rawData?.points as ReconTimeseriesPoint[] | undefined) ?? [];
+    const rawRecords = (rawData?.records as ReconRawRecordRow[] | undefined) ?? [];
+
     return <>
-        <div className="section-heading"><div><h2><Database size={19} /> WAN & Reconciliation</h2><p>Compare WAN input with counted CREW/BUSINESS interfaces. A missing source is not a zero.</p></div><label className="filter-control"><span>View</span><select className="filter-select" value={mode} onChange={event => setMode(event.target.value as ReconciliationMode)}><option value="summary">Summary</option><option value="by-wan">By WAN</option><option value="by-interface">By interface</option><option value="by-zone">By zone</option><option value="timeseries">Gap time series</option><option value="raw">Raw records</option></select></label></div>
+        <div className="section-heading"><div><h2><Database size={19} /> WAN & Reconciliation</h2><p>Compare WAN input with counted CREW/BUSINESS interfaces. A missing source is not a zero.</p></div><label className="filter-control"><span>View</span><select className="filter-select" value={mode} onChange={event => setMode(event.target.value as ReconciliationMode)}><option value="summary">Summary</option><option value="by-wan">By WAN</option><option value="by-interface">By interface</option><option value="by-zone">By zone</option><option value="timeseries">Volume &amp; speed over time</option><option value="raw">Raw records</option></select></label></div>
         {loading && <div className="loading-block"><div className="loading-spinner" /><span>Loading reconciliation…</span></div>}
         {!loading && error && <DataStateNotice dataStatus="UNAVAILABLE" availability={{ status: DashboardAvailability.status.UNAVAILABLE, code: DashboardAvailability.code.RECONCILIATION_UNAVAILABLE, message: error.message, missing_sources: missingSources }} title="Reconciliation telemetry is not available" description={`${error.message} The UI is withholding all gap values.`} onRetry={onRetry} />}
         {!loading && !error && summary && <SummaryReconciliation data={summary} period={period} />}
-        {!loading && !error && items && <section className="glass-panel dashboard-section"><div className="section-heading"><div><h3>{mode.replace('-', ' ')} records</h3><p>Items are rendered from the typed `items` array returned by the selected contract route.</p></div></div><div className="table-shell"><table className="data-table"><thead><tr><th>Record</th><th>Attributes</th></tr></thead><tbody>{items.map((item, index) => <tr key={index}><td>{typeof item === 'object' && item !== null && 'name' in item ? String(item.name) : `Record ${index + 1}`}</td><td><code>{JSON.stringify(item)}</code></td></tr>)}</tbody></table></div></section>}
+
+        {!loading && !error && (mode === 'by-wan' || mode === 'by-interface') && (
+            <section className="glass-panel dashboard-section">
+                <div className="section-heading"><div><h3>Lượng data theo interface</h3><p>Cộng gộp download + upload mỗi interface trong khoảng thời gian đã chọn.</p></div></div>
+                <CategoryVolumeBarChart items={interfaceRows.map(row => ({ label: row.name ?? row.interface_id ?? '?', bytes: row.download_bytes != null || row.upload_bytes != null ? (row.download_bytes ?? 0) + (row.upload_bytes ?? 0) : null }))} />
+                <div className="table-shell" style={{ marginTop: 14 }}><table className="data-table"><thead><tr><th>Interface</th><th>Accounting group</th><th>Download</th><th>Upload</th><th>Counter reset</th></tr></thead><tbody>{interfaceRows.map((row, index) => <tr key={row.interface_id ?? index}><td>{row.name ?? row.interface_id ?? 'Unknown'}</td><td>{row.accounting_group ?? 'Not assigned'}</td><td>{formatBytes(row.download_bytes).value} {formatBytes(row.download_bytes).unit}</td><td>{formatBytes(row.upload_bytes).value} {formatBytes(row.upload_bytes).unit}</td><td>{formatCount(row.counter_resets)}</td></tr>)}</tbody></table></div>
+                {interfaceRows.length === 0 && <div className="empty-state">No interface records were returned for this period.</div>}
+            </section>
+        )}
+
+        {!loading && !error && mode === 'by-zone' && (
+            <section className="glass-panel dashboard-section">
+                <div className="section-heading"><div><h3>Lượng data theo zone</h3><p>Cộng gộp download + upload mỗi accounting group trong khoảng thời gian đã chọn.</p></div></div>
+                <CategoryVolumeBarChart items={zoneRows.map(row => ({ label: row.accounting_group ?? '?', bytes: row.download_bytes != null || row.upload_bytes != null ? (row.download_bytes ?? 0) + (row.upload_bytes ?? 0) : null }))} />
+                <div className="table-shell" style={{ marginTop: 14 }}><table className="data-table"><thead><tr><th>Zone</th><th>Download</th><th>Upload</th></tr></thead><tbody>{zoneRows.map((row, index) => <tr key={row.accounting_group ?? index}><td>{row.accounting_group ?? 'Unknown'}</td><td>{formatBytes(row.download_bytes).value} {formatBytes(row.download_bytes).unit}</td><td>{formatBytes(row.upload_bytes).value} {formatBytes(row.upload_bytes).unit}</td></tr>)}</tbody></table></div>
+                {zoneRows.length === 0 && <div className="empty-state">No zone records were returned for this period.</div>}
+            </section>
+        )}
+
+        {!loading && !error && mode === 'timeseries' && (
+            <section className="glass-panel dashboard-section">
+                <div className="section-heading">
+                    <div><h3>Lượng data tiêu thụ &amp; tốc độ theo thời gian</h3><p>Cột = byte thật mỗi bucket ({granularity}). Line = tốc độ (Mbps), suy từ byte thật ÷ độ dài bucket.</p></div>
+                    <label className="filter-control"><span>Zone</span><select className="filter-select" value={timeseriesZone} onChange={event => setTimeseriesZone(event.target.value as ReconZoneKey)}>{(Object.keys(RECON_ZONE_LABEL) as ReconZoneKey[]).map(key => <option key={key} value={key}>{RECON_ZONE_LABEL[key]}</option>)}</select></label>
+                </div>
+                <VolumeSpeedChart granularity={granularity} points={points.map(point => ({ bucket: point.bucket, download_bytes: point[timeseriesZone]?.download_bytes ?? null, upload_bytes: point[timeseriesZone]?.upload_bytes ?? null }))} />
+                {points.length === 0 && <div className="empty-state">No time-bucketed records were returned for this period.</div>}
+            </section>
+        )}
+
+        {!loading && !error && mode === 'raw' && (
+            <section className="glass-panel dashboard-section">
+                <div className="section-heading"><div><h3>Raw interface counter samples</h3><p>Mẫu counter thô nhất (rx/tx byte tại 1 thời điểm), chưa quy đổi delta — dùng để soi dữ liệu gốc khi nghi ngờ sai lệch.</p></div></div>
+                <div className="table-shell"><table className="data-table"><thead><tr><th>Observed at</th><th>Interface</th><th>RX bytes</th><th>TX bytes</th><th>Nguồn counter</th></tr></thead><tbody>{rawRecords.map((row, index) => <tr key={row.id ?? index}><td>{row.observed_at ? new Date(row.observed_at).toLocaleString('vi-VN') : 'Unknown'}</td><td>{row.interface_id ?? 'Unknown'}</td><td>{formatCount(row.rx_bytes)}</td><td>{formatCount(row.tx_bytes)}</td><td>{row.counter_source ?? 'Unknown'}</td></tr>)}</tbody></table></div>
+                {rawRecords.length === 0 && <div className="empty-state">No raw records were returned for this period.</div>}
+            </section>
+        )}
     </>;
 }
 

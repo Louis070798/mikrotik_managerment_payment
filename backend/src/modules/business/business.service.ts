@@ -95,7 +95,9 @@ export class BusinessService {
     const period = resolvePeriod(query, query.timezone ?? ship.timezone);
     const from = new Date(period.from);
     const to = new Date(period.to);
-    const bucket = bucketSql(interfaceCounterDeltas.bucket, period.granularity, period.timezone);
+    // .as('bucket') + GROUP BY/ORDER BY theo VI TRI -- xem chu thich dai o dashboard.service.ts
+    // getTimeseries() (loi that voi granularity=1d, khong phai suy doan).
+    const bucket = bucketSql(interfaceCounterDeltas.bucket, period.granularity, period.timezone).as('bucket');
 
     const rows = await this.db
       .select({
@@ -114,8 +116,8 @@ export class BusinessService {
           lte(interfaceCounterDeltas.bucket, to),
         ),
       )
-      .groupBy(bucket)
-      .orderBy(bucket);
+      .groupBy(sql`1`)
+      .orderBy(sql`1`);
 
     const points = rows.map((row) => ({
       bucket: toDate(row.bucket)!.toISOString(),

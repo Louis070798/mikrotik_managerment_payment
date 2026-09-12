@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, ilike, inArray, isNull, SQL } from 'drizzle-orm';
 import { DB_TOKEN, DbClient } from '@db/db.module';
@@ -22,6 +21,10 @@ function toApi(row: typeof subscribers.$inferSelect) {
     id: row.id,
     tenant_id: row.tenantId,
     username: row.username,
+    // Thuan tuy hien thi cho admin nhan dien -- KHONG dung trong xac thuc RADIUS (van chi dung
+    // username). null neu chua dat.
+    display_name: row.displayName,
+    notes: row.notes,
     auth_type: row.authType,
     nas_device_id: row.nasDeviceId,
     package_id: row.packageId,
@@ -34,11 +37,6 @@ function toApi(row: typeof subscribers.$inferSelect) {
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };
-}
-
-/** 12 ký tự base64url (~72 bit entropy) — đủ ngắn để người dùng gõ tay vào máy khách Hotspot/PPPoE. */
-function generateSubscriberPassword(): string {
-  return randomBytes(9).toString('base64url');
 }
 
 @Injectable()
@@ -85,6 +83,12 @@ export class SubscribersService {
     return toApi(row);
   }
 
+  /**
+   * Subscriber la 1 tai khoan dang nhap Hotspot/PPPoE that. Mat khau do ADMIN TU GO NGAY luc tao
+   * (input.password bat buoc) -- KHONG con tu sinh ngau nhien nua (bo tinh nang "cap mat khau" tu
+   * dong theo yeu cau nguoi dung). Server chi luu ban bam (scrypt), khong bao gio tra lai mat khau
+   * qua toApi() (list/get/update) vi da la thu admin tu nhap, khong can "hien 1 lan" nua.
+   */
   async create(input: CreateSubscriberInput) {
     await this.assertTenant(input.tenant_id);
     await this.assertPackage(input.package_id);
@@ -103,10 +107,14 @@ export class SubscribersService {
       .values({
         tenantId: input.tenant_id,
         username: input.username,
+        displayName: input.display_name ?? null,
+        notes: input.notes ?? null,
         authType: input.auth_type,
         nasDeviceId: input.nas_device_id ?? null,
         packageId: input.package_id,
         expiresAt: new Date(input.expires_at),
+        passwordHash: hashPassword(input.password),
+        passwordIssuedAt: new Date(),
       })
       .returning();
 
@@ -124,6 +132,8 @@ export class SubscribersService {
     const [afterRow] = await this.db
       .update(subscribers)
       .set({
+        ...(input.display_name !== undefined && { displayName: input.display_name }),
+        ...(input.notes !== undefined && { notes: input.notes }),
         ...(input.auth_type !== undefined && { authType: input.auth_type }),
         ...(input.nas_device_id !== undefined && { nasDeviceId: input.nas_device_id }),
         ...(input.package_id !== undefined && { packageId: input.package_id }),
@@ -184,20 +194,19 @@ export class SubscribersService {
   }
 
   /**
-   * Cấp mật khẩu RADIUS thật cho subscriber (PPPoE/Hotspot) — sinh ngẫu nhiên, băm scrypt lưu
-   * lại, trả plaintext ĐÚNG 1 LẦN (đối xứng với devices.issueRadiusSecret()/issuePushApiKey()).
-   * Backend tự xác thực Access-Request bằng hash này (radius-server.service.ts) — không còn
-   * uỷ quyền cho PostgreSQL AAA riêng như dự tính ban đầu (xem migration 0011).
+   * Dat mat khau RADIUS cho subscriber (PPPoE/Hotspot) BANG MAT KHAU ADMIN TU GO -- khong con tu
+   * sinh ngau nhien (bo tinh nang "cap mat khau" tu dong). Bam scrypt luu lai, KHONG tra plaintext
+   * ve nua (admin da biet minh vua go gi, khong can "hien 1 lan"). Backend tu xac thuc
+   * Access-Request bang hash nay (radius-server.service.ts).
    */
-  async issuePassword(id: string) {
+  async setPassword(id: string, password: string) {
     const before = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
     if (!before) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
 
-    const plaintext = generateSubscriberPassword();
     const passwordIssuedAt = new Date();
     await this.db
       .update(subscribers)
-      .set({ passwordHash: hashPassword(plaintext), passwordIssuedAt, updatedAt: passwordIssuedAt })
+      .set({ passwordHash: hashPassword(password), passwordIssuedAt, updatedAt: passwordIssuedAt })
       .where(eq(subscribers.id, id));
 
     await this.audit.record({
@@ -209,7 +218,34 @@ export class SubscribersService {
       result: 'SUCCESS',
     });
 
-    return { password: plaintext, issued_at: passwordIssuedAt.toISOString() };
+    return { issued_at: passwordIssuedAt.toISOString() };
+  }
+
+  /**
+   * Reset quota_used_bytes ve 0 -- tac vu quan ly rieng (khong phai 1 field PATCH thuong) vi day
+   * la hanh dong co chu dich ro rang ("gia han/cap lai dung luong cho user nay"), can audit rieng
+   * de phan biet voi 1 lan sua thong tin thong thuong. Khong dong lien voi issuePassword/update.
+   */
+  async resetQuota(id: string) {
+    const before = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
+    if (!before) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+
+    const [afterRow] = await this.db
+      .update(subscribers)
+      .set({ quotaUsedBytes: 0, updatedAt: new Date() })
+      .where(eq(subscribers.id, id))
+      .returning();
+
+    await this.audit.record({
+      action: 'subscriber.reset_quota',
+      resourceType: 'subscriber',
+      resourceId: id,
+      before: { quota_used_bytes: before.quotaUsedBytes },
+      after: { quota_used_bytes: 0 },
+      result: 'SUCCESS',
+    });
+
+    return toApi(afterRow);
   }
 
   async revokePassword(id: string) {

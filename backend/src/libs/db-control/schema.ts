@@ -720,6 +720,12 @@ export const tenants = pgTable(
     contactEmail: text('contact_email'),
     address: text('address'),
     taxId: text('tax_id'),
+    // Tai khoan dang nhap that cua tenant nay (nang cap tu placeholder Auth/RBAC) -- scrypt, dung
+    // cach lam giong subscribers.passwordHash (0011_subscriber_radius_password.sql), khong phai
+    // credential_ref kieu "env:VAR" (do la secret ha tang, ADR-05, khac ban chat).
+    username: text('username'),
+    passwordHash: text('password_hash'),
+    passwordIssuedAt: timestamp('password_issued_at', { withTimezone: true }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -727,6 +733,7 @@ export const tenants = pgTable(
   (t) => ({
     codeUq: uniqueIndex('tenants_code_uq').on(t.code),
     parentIx: index('tenants_parent_ix').on(t.parentId),
+    usernameUq: uniqueIndex('tenants_username_uq').on(t.username).where(sql`${t.username} IS NOT NULL AND ${t.deletedAt} IS NULL`),
   }),
 );
 
@@ -762,6 +769,10 @@ export const subscribers = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: 'restrict' }),
     username: text('username').notNull(),
+    // Ten hien thi/ho ten -- THUAN TUY hien thi cho admin de nhan dien, khac username dang nhap,
+    // KHONG dung trong xac thuc RADIUS (Access-Request van chi dung username). Ghi chu tu do.
+    displayName: text('display_name'),
+    notes: text('notes'),
     authType: subscriberAuthTypeEnum('auth_type').notNull(),
     // "NAS" trong thiết kế tham khảo = MikroTik router — tái dùng bảng devices có sẵn.
     nasDeviceId: uuid('nas_device_id').references(() => devices.id, { onDelete: 'set null' }),

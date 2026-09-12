@@ -64,6 +64,22 @@ export function formatBytes(value: number | null | undefined): { value: string; 
     return { value: amount.toFixed(amount >= 100 ? 0 : amount >= 10 ? 1 : 2), unit: units[index] };
 }
 
+const BYTE_UNIT_STEPS: Array<{ threshold: number; divisor: number; label: string }> = [
+    { threshold: 1e12, divisor: 1e12, label: 'TB' },
+    { threshold: 1e9, divisor: 1e9, label: 'GB' },
+    { threshold: 1e6, divisor: 1e6, label: 'MB' },
+    { threshold: 1e3, divisor: 1e3, label: 'kB' },
+    { threshold: 0, divisor: 1, label: 'byte' },
+];
+
+/** Chọn 1 đơn vị chung (GB/MB/...) cho CẢ 1 chuỗi giá trị (biểu đồ) dựa trên giá trị lớn nhất --
+ * khác formatBytes() (chọn đơn vị riêng cho TỪNG số), vì trục Y của biểu đồ cần 1 đơn vị duy nhất
+ * cho mọi cột/điểm, không thể mỗi cột 1 đơn vị khác nhau. */
+export function pickByteUnit(maxBytes: number): { divisor: number; label: string } {
+    const found = BYTE_UNIT_STEPS.find(step => maxBytes >= step.threshold);
+    return found ?? BYTE_UNIT_STEPS[BYTE_UNIT_STEPS.length - 1];
+}
+
 export function formatRate(value: number | null | undefined): { value: string; unit: string } {
     if (value === null || value === undefined) return { value: 'Not available', unit: '' };
     if (value < 1000) return { value: value.toLocaleString(), unit: 'bit/s' };
@@ -75,6 +91,26 @@ export function formatRate(value: number | null | undefined): { value: string; u
         index += 1;
     }
     return { value: amount.toFixed(amount >= 100 ? 0 : amount >= 10 ? 1 : 2), unit: units[index] };
+}
+
+/** Gộp download+upload thành 1 con số "tổng data" — dùng ở mọi nơi cần hiện 1 thẻ tổng thay vì 2
+ * thẻ tách chiều (Tổng quan, chi tiết thiết bị...). null khi CẢ HAI đều null (chưa có dữ liệu nào),
+ * không phải khi chỉ 1 chiều null (vd 1 zone chỉ có download, upload=0 là giá trị thật). */
+export function combineBytes(download: number | null | undefined, upload: number | null | undefined): number | null {
+    if (download == null && upload == null) return null;
+    return (download ?? 0) + (upload ?? 0);
+}
+
+/** Gộp độ lệch (gap) 2 chiều đã tính sẵn từ backend thành 1 số byte + 1% duy nhất — % tính từ
+ * bytes gộp / measured gộp (không lấy trung bình 2%), đúng công thức toán khi 2 chiều lệch quy mô
+ * nhau (vd download chiếm 90% traffic thì % gộp phải thiên về % download, không phải trung bình
+ * cộng đơn giản với upload). */
+export function combineGapBytes(measuredDownload: number | null | undefined, measuredUpload: number | null | undefined, gapDownloadBytes: number | null | undefined, gapUploadBytes: number | null | undefined): { bytes: number | null; pct: number | null } {
+    if (gapDownloadBytes == null || gapUploadBytes == null) return { bytes: null, pct: null };
+    const bytes = gapDownloadBytes + gapUploadBytes;
+    const measured = combineBytes(measuredDownload, measuredUpload);
+    const pct = measured !== null && measured !== 0 ? Math.round((bytes / measured) * 1000) / 10 : null;
+    return { bytes, pct };
 }
 
 export function formatVnd(value: number | null | undefined): string {

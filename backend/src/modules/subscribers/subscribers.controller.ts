@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } fr
 import { RequirePermission } from '@auth-stub/auth-stub.guard';
 import { zodBody } from '@common/zod-validation.pipe';
 import { SubscribersService } from './subscribers.service';
-import { BulkAssignSchema, CreateSubscriberSchema, ListSubscribersQuerySchema, UpdateSubscriberSchema } from './dto';
+import { BulkAssignSchema, CreateSubscriberSchema, ListSubscribersQuerySchema, SetSubscriberPasswordSchema, UpdateSubscriberSchema } from './dto';
 
 @Controller('subscribers')
 export class SubscribersController {
@@ -49,10 +49,19 @@ export class SubscribersController {
     await this.service.remove(subscriberId);
   }
 
+  @Post(':subscriberId/reset-quota')
+  @RequirePermission('subscriber:write')
+  resetQuota(@Param('subscriberId') subscriberId: string) {
+    return this.service.resetQuota(subscriberId);
+  }
+
   @Post(':subscriberId/password')
   @RequirePermission('subscriber:write')
-  issuePassword(@Param('subscriberId') subscriberId: string) {
-    return this.service.issuePassword(subscriberId);
+  setPassword(
+    @Param('subscriberId') subscriberId: string,
+    @Body(zodBody(SetSubscriberPasswordSchema)) body: ReturnType<typeof SetSubscriberPasswordSchema['parse']>,
+  ) {
+    return this.service.setPassword(subscriberId, body.password);
   }
 
   @Delete(':subscriberId/password')

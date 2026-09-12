@@ -591,7 +591,13 @@ export class ReconciliationService {
     const period = resolvePeriod(query, query.timezone ?? ship.timezone);
     const from = new Date(period.from);
     const to = new Date(period.to);
-    const bucket = bucketSql(interfaceCounterDeltas.bucket, period.granularity, period.timezone);
+    // .as('bucket') + GROUP BY/ORDER BY theo VI TRI (khong lap lai bieu thuc bucket) -- Drizzle
+    // render bucket KHONG qualify table o SELECT nhung CO qualify o GROUP BY/ORDER BY khi lap lai
+    // cung 1 bieu thuc raw sql() o ca 3 menh de; Postgres coi 2 dang qualify khac nhau la 2 bieu
+    // thuc KHAC NHAU -> loi that "column must appear in GROUP BY" voi granularity=1d (bieu thuc
+    // long AT TIME ZONE 2 lop moi lo ro loi nay; 1h/5m/1m don gian hon nen tinh co khong lo). Da
+    // xac nhan bang bucketSql() truc tiep qua drizzle + Postgres that (khong doan).
+    const bucket = bucketSql(interfaceCounterDeltas.bucket, period.granularity, period.timezone).as('bucket');
 
     const rows = await this.db
       .select({
@@ -602,8 +608,8 @@ export class ReconciliationService {
       })
       .from(interfaceCounterDeltas)
       .where(and(eq(interfaceCounterDeltas.shipId, shipId), gte(interfaceCounterDeltas.bucket, from), lte(interfaceCounterDeltas.bucket, to)))
-      .groupBy(bucket, interfaceCounterDeltas.accountingGroup)
-      .orderBy(bucket);
+      .groupBy(sql`1`, interfaceCounterDeltas.accountingGroup)
+      .orderBy(sql`1`);
 
     if (rows.length === 0) this.unavailable(period);
 

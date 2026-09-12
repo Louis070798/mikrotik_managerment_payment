@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DefaultService } from '../api';
 import { Anchor } from 'lucide-react';
+import { getApiErrorInfo } from '../lib/dashboard';
 
 export const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -20,15 +21,22 @@ export const Login: React.FC = () => {
 
             if (res.data?.token) {
                 localStorage.setItem('token', res.data.token);
-                // Chua co Auth/RBAC that (xem backend/src/libs/auth-stub/auth-stub.guard.ts) —
-                // '*' la wildcard duoc AuthStubGuard chap nhan cho moi permission.
-                localStorage.setItem('permissions', '*');
+                // Quyen THAT theo vai tro dang nhap (xem backend/src/modules/auth/auth.service.ts) —
+                // '*' cho admin (gom ca fallback khi username khong khop tenant nao), danh sach hep
+                // hon cho tenant.
+                localStorage.setItem('permissions', res.data.permissions ?? '*');
+                localStorage.setItem('role', res.data.role ?? 'admin');
+                localStorage.setItem('actorName', res.data.name ?? '');
                 navigate('/');
             } else {
-                setError('Invalid login response');
+                setError('Phản hồi đăng nhập không hợp lệ — thiếu token.');
             }
-        } catch {
-            setError('Invalid credentials or network error.');
+        } catch (requestError) {
+            // Hien dung thong bao that tu backend (vd "Sai username hoặc mật khẩu." — xem
+            // AuthService.login(), tra ve khi username khong ton tai HOAC ton tai nhung sai mat
+            // khau, cung 1 thong bao cho ca 2 truong hop de khong lo username nao co that trong
+            // he thong) thay vi 1 chuoi chung chung khong phan biet duoc loi mang voi sai mat khau.
+            setError(getApiErrorInfo(requestError).message);
         } finally {
             setLoading(false);
         }

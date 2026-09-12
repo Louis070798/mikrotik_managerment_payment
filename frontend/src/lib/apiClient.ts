@@ -9,20 +9,25 @@ import axios from 'axios';
  * always wins over a global OpenAPI.HEADERS resolver and the key gets
  * stripped before the request is sent. An axios interceptor is the only
  * place that can reliably attach the header for every request.
+ *
+ * NÂNG CẤP 2026-09-07 (xem backend/src/modules/auth/auth.service.ts): POST /auth/login giờ trả
+ * permissions THẬT theo vai trò đăng nhập ('*' cho admin, danh sách hẹp hơn cho tenant) — Login.tsx
+ * lưu đúng giá trị đó vào localStorage['permissions']. KHÔNG còn ghi đè cứng '*' ở đây nữa (làm vậy
+ * sẽ vô hiệu hoá hoàn toàn giới hạn quyền của tenant) — chỉ dùng '*' làm phương án dự phòng cho
+ * phiên cũ từ trước khi có thay đổi này (localStorage chưa từng có giá trị 'permissions' thật).
  */
 axios.interceptors.request.use(config => {
     if (!config.headers['x-actor-permissions']) {
-        // TAM THOI (xem backend/src/modules/auth/auth.controller.ts +
-        // libs/auth-stub/auth-stub.guard.ts): AuthController.login() nhan bat ky
-        // username/password nao va khong gan quyen theo vai tro that -- khong co RBAC that o
-        // giai doan nay nen '*' la quyen hop le DUY NHAT cho moi phien dang nhap. Luon ghi de
-        // '*' o day (khong doc lai gia tri cu trong localStorage) de tu phuc hoi neu key
-        // 'permissions' tung bi ghi thanh 1 danh sach hep hon tu lan test truoc -- 1 gia tri cu
-        // sai se lam FORBIDDEN moi trang ghi du lieu (vd ZeroTier tao/sua/xoa) ma khong ro ly do.
         if (localStorage.getItem('token')) {
-            localStorage.setItem('permissions', '*');
-            config.headers['x-actor-permissions'] = '*';
+            const stored = localStorage.getItem('permissions');
+            config.headers['x-actor-permissions'] = stored && stored.length > 0 ? stored : '*';
         }
+    }
+    // GET /auth/me giải mã danh tính THẬT từ token qua header Authorization -- không có header
+    // này, /auth/me luôn trả về danh tính admin mặc định (xem AuthService.me()).
+    if (!config.headers['Authorization']) {
+        const token = localStorage.getItem('token');
+        if (token) config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
 });

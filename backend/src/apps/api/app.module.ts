@@ -29,6 +29,7 @@ import { PackagesModule } from '../../modules/packages/packages.module';
 import { SubscribersModule } from '../../modules/subscribers/subscribers.module';
 import { ZeroTierModule } from '../../modules/zerotier/zerotier.module';
 import { FinanceModule } from '../../modules/finance/finance.module';
+import { SettingsModule } from '../../modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { FinanceModule } from '../../modules/finance/finance.module';
     SubscribersModule,
     ZeroTierModule,
     FinanceModule,
+    SettingsModule,
     RadiusServerModule,
     NetflowCollectorModule,
     DnsLogCollectorModule,

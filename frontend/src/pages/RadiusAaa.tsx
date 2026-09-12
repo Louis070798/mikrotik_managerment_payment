@@ -116,10 +116,6 @@ export const RadiusAaa: React.FC = () => {
 
     return (
         <div>
-            <div className="top-bar">
-                <div><h1>RADIUS / AAA</h1><p className="page-subtitle">Giám sát RADIUS Accounting thật (UDP 1813, RFC 2866) theo từng tàu, và cấu hình secret/IP theo từng thiết bị.</p></div>
-            </div>
-
             <div className="grid-cards" style={{ marginBottom: 20 }}>
                 <MetricCard title="Tàu có RADIUS đạt HA" value={`${shipsCompliant} / ${ships.length}`} period="Hiện tại" source="crew/radius-health" freshness="Trực tiếp từ DB" status={ships.length > 0 && shipsCompliant === ships.length ? 'healthy' : 'warning'} description="HA yêu cầu tối thiểu 2 endpoint radius.auth+radius.accounting mỗi tàu." />
                 <MetricCard title="Endpoint RADIUS khoẻ mạnh" value={totalActiveEndpoints} unit="endpoint" period="Hiện tại" source="service_registry+telemetry" freshness="Trực tiếp từ DB" status="healthy" />

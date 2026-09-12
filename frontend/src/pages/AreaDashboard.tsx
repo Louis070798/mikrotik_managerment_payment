@@ -73,13 +73,8 @@ export const AreaDashboard: React.FC = () => {
 
     return (
         <div>
-            <div className="top-bar">
-                <div><h1>Area Dashboard</h1><p className="page-subtitle">Compare fleet health and telemetry readiness by operating area.</p></div>
-                <span className="freshness-indicator">{areasLoading ? 'Loading areas…' : `${areas.length} configured areas`}</span>
-            </div>
-
             <div className="filters-bar">
-                <label className="filter-control"><span>Search</span><input className="filter-select" value={search} onChange={event => setSearch(event.target.value)} placeholder="Area name or code" /></label>
+                <label className="filter-control filter-control-inline"><span>Search</span><input className="filter-select" value={search} onChange={event => setSearch(event.target.value)} placeholder="Area name or code" /></label>
                 <label className="filter-control"><span>Area</span><select className="filter-select" value={areaFilter} onChange={event => setAreaFilter(event.target.value)}><option value="ALL">All areas</option>{areas.map(area => <option key={area.id} value={area.code}>{area.name}</option>)}</select></label>
             </div>
             <DashboardFilters value={filters} onChange={setFilters} onApply={() => void fetchData()} loading={loading} />

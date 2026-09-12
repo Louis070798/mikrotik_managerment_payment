@@ -31,7 +31,7 @@ export const SecretReveal: React.FC<SecretRevealProps> = ({ heading, value, copi
             <strong style={{ color: palette.text }}>{heading}</strong>
             <div className="token-reveal-row">
                 <code>{value}</code>
-                <button type="button" className="button-secondary compact-button" onClick={onCopy}>{copied ? 'Đã chép ✓' : 'Sao chép'}</button>
+                <button type="button" className={`button-secondary compact-button${copied ? ' copied-pop' : ''}`} onClick={onCopy}>{copied ? 'Đã chép ✓' : 'Sao chép'}</button>
             </div>
             {caption && <p style={{ margin: 0, fontSize: 12, color: palette.text }}>{caption}</p>}
         </div>

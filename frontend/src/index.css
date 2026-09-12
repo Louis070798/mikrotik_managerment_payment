@@ -88,6 +88,49 @@ button:disabled {
   transform: none;
 }
 
+/* Nut hanh dong chinh (khong phai secondary/icon/list-item/card) -- them "shine sweep" quet qua
+   khi hover + nhun nhe khi bam, kieu animated-button pho bien tren uiverse.io/tags/animation, ap
+   dung 1 lan o day la co hieu luc TOAN HE THONG (moi trang dung chung <button>/.filter-apply). */
+button:not(.button-secondary):not(.icon-copy-button):not(.ship-list-item):not(.area-selector):not(.metric-card-button) {
+  position: relative;
+  overflow: hidden;
+  transition: background-color 0.25s ease, transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+
+button:not(.button-secondary):not(.icon-copy-button):not(.ship-list-item):not(.area-selector):not(.metric-card-button):hover {
+  box-shadow: 0 10px 20px -10px rgba(59, 130, 246, 0.6);
+}
+
+button:not(.button-secondary):not(.icon-copy-button):not(.ship-list-item):not(.area-selector):not(.metric-card-button):active {
+  transform: translateY(0) scale(0.96);
+  box-shadow: none;
+}
+
+button:not(.button-secondary):not(.icon-copy-button):not(.ship-list-item):not(.area-selector):not(.metric-card-button)::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -60%;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+button:not(.button-secondary):not(.icon-copy-button):not(.ship-list-item):not(.area-selector):not(.metric-card-button):hover::after {
+  left: 130%;
+}
+
+.button-secondary {
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.button-secondary:active {
+  transform: scale(0.96);
+}
+
 button:focus-visible,
 a:focus-visible,
 select:focus-visible,
@@ -188,6 +231,19 @@ input:focus-visible {
   text-transform: uppercase;
 }
 
+/* Bien the nam ngang cua .filter-control -- danh cho o TIM KIEM (label + input cung 1 hang), khac
+   .filter-control mac dinh (label tren, o duoi) van giu nguyen cho dropdown/date-picker o cac bo
+   loc khac de khong doi layout noi khong yeu cau. */
+.filter-control-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.filter-control-inline span {
+  white-space: nowrap;
+}
+
 .filter-apply {
   align-self: end;
   min-height: 38px;
@@ -228,6 +284,68 @@ input:focus-visible {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.settings-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+
+.settings-current {
+  font-size: 0.82rem;
+  color: var(--text-main);
+  background: var(--filter-bar-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.settings-field label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.settings-field input,
+.settings-field select {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.settings-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.settings-footer .settings-field {
+  flex: 1;
 }
 
 .usage-chip {
@@ -271,6 +389,22 @@ input:focus-visible {
 
 .icon-copy-button.copied {
   color: var(--success);
+  animation: copyPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Nut "Sao chep" chuyen sang "Da chep" -- but nay lay class .copied-pop luc do (SecretReveal.tsx),
+   dung chung 1 keyframe voi icon-copy-button de 2 kieu nut sao chep trong he thong nhun/bat cung
+   1 cach, khong phai nghi lai animation rieng cho tung noi. */
+.copied-pop {
+  animation: copyPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: var(--success) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+@keyframes copyPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
 }
 
 .raw-record-list {
@@ -333,11 +467,12 @@ input:focus-visible {
   border: 1px solid var(--glass-border);
   border-left: 3px solid var(--text-muted);
   border-radius: 8px;
+  animation: fadeInUp 0.4s ease-out both;
 }
 
 .mini-stat-healthy { border-left-color: var(--success); }
-.mini-stat-warning { border-left-color: var(--warning); }
-.mini-stat-critical { border-left-color: var(--danger); }
+.mini-stat-warning { border-left-color: var(--warning); animation: fadeInUp 0.4s ease-out both, alertGlowWarning 2.2s ease-in-out 0.4s infinite; }
+.mini-stat-critical { border-left-color: var(--danger); animation: fadeInUp 0.4s ease-out both, alertGlowCritical 1.6s ease-in-out 0.4s infinite; }
 
 .mini-stat-label {
   font-size: 0.68rem;
@@ -401,10 +536,16 @@ input:focus-visible {
   width: 100%;
   color: inherit;
   text-align: left;
+  transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
 .metric-card-button:hover {
   background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+.metric-card-button:active {
+  transform: translateY(-1px) scale(0.99);
 }
 
 .stat-value-unavailable {
@@ -577,7 +718,11 @@ input:focus-visible {
   border: 1px solid var(--border);
   background: var(--panel-bg);
   min-width: 104px;
+  animation: fadeInUp 0.4s ease-out both;
 }
+
+.stat-chip-warning { animation: fadeInUp 0.4s ease-out both, alertGlowWarning 2.2s ease-in-out 0.4s infinite; }
+.stat-chip-critical { animation: fadeInUp 0.4s ease-out both, alertGlowCritical 1.6s ease-in-out 0.4s infinite; }
 
 .stat-chip-value {
   font-size: 18px;
@@ -766,6 +911,21 @@ input:focus-visible {
   border-color: var(--primary);
 }
 
+/* Bien the gon hon cua .tab-row -- chu nho + padding it hon, dung khi nhan tab chi la 1-2 tu ngan
+   (vd loc trang thai) khong can to nhu tab dieu huong chinh giua trang chi tiet. CHI ap dung noi
+   dat class nay, khong doi .tab-row mac dinh (dang dung o nhieu trang khac, vd tab dieu huong
+   ShipDashboard/DeviceDetail can giu kich thuoc hien tai). */
+.tab-row-compact {
+  gap: 0.35rem;
+  padding-bottom: 0.5rem;
+}
+
+.tab-row-compact button {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -773,6 +933,42 @@ input:focus-visible {
   gap: 1rem;
   margin-bottom: 0.8rem;
 }
+
+/* Hang so lieu KPI dat canh tieu de bieu do (vd "Hom nay 12 Mbps" / "TB 7 ngay 9 Mbps" / "+18%
+   so voi tuan truoc") -- lay cam hung tu cac the "Revenue/Sessions trend" cua Adminator (colorlib),
+   nhung MOI SO O DAY deu tinh tu du lieu that da co san (session_time_s, quota_used_bytes...),
+   khong bia dat theo kieu "YoY/Forecast" demo. Dat lam item thu 2 trong .section-heading (flex
+   space-between) de nam gon ben phai tieu de, khong can wrapper rieng. */
+.chart-kpi-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.chart-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.chart-kpi-label {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.chart-kpi-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-heading);
+}
+
+.chart-kpi-value.positive { color: var(--success); }
+.chart-kpi-value.negative { color: var(--danger); }
 
 .section-heading h2,
 .section-heading h3 {
@@ -899,15 +1095,31 @@ input:focus-visible {
 
 .input-field:focus {
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.settings-field input,
+.settings-field select,
+.filter-select {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.settings-field input:focus,
+.settings-field select:focus,
+.filter-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+  outline: none;
 }
 
 .loading-spinner {
   border: 3px solid rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   border-top: 3px solid var(--primary);
+  border-right: 3px solid var(--primary-hover);
   width: 24px;
   height: 24px;
-  animation: spin 1s linear infinite;
+  animation: spin 0.85s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
 }
 
 @keyframes spin {
@@ -994,10 +1206,17 @@ input:focus-visible {
   color: var(--text-main);
   cursor: pointer;
   text-align: left;
+  transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
 .ship-list-item:hover {
   border-color: var(--primary);
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px -6px rgba(59, 130, 246, 0.45);
+}
+
+.ship-list-item:active {
+  transform: translateX(2px) scale(0.985);
 }
 
 .ship-list-item.selected {
@@ -1056,6 +1275,17 @@ input:focus-visible {
   cursor: pointer;
   color: var(--text-main);
   border: 1px solid var(--border);
+  transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.area-selector:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -8px rgba(59, 130, 246, 0.45);
+}
+
+.area-selector:active {
+  transform: translateY(-1px) scale(0.985);
 }
 
 .area-selector.selected {
@@ -1077,6 +1307,7 @@ input:focus-visible {
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+  animation: overlayIn 0.2s ease-out both;
 }
 
 .modal-card {
@@ -1085,6 +1316,7 @@ input:focus-visible {
   max-height: 90vh;
   overflow-y: auto;
   padding: 1.5rem;
+  animation: modalCardIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 .modal-card-wide {
@@ -1107,4 +1339,64 @@ input:focus-visible {
 .editable-row .filter-select {
   flex: 1;
   min-width: 0;
+}
+
+/* =========================================================================================
+   Lop animation lay cam hung tu uiverse.io/tags/animation (nut bam, loader, the/card, badge,
+   modal, o nhap) -- gan mot lan vao cac class dung chung o tren, co hieu luc TOAN HE THONG
+   (moi trang deu dung lai .glass-panel/.mini-stat/.ship-list-item/... nen khong can sua tung
+   trang). Cac keyframe dung chung duoc gom o day thay vi ranh o tung cho dung, de de doi mau/
+   thoi luong 1 cho duy nhat. Ton trong prefers-reduced-motion o cuoi file.
+   ========================================================================================= */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalCardIn {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Nhip "tho" nhe quanh vien trai cua mini-stat/stat-chip khi o trang thai warning/critical --
+   CHI danh cho 2 muc nay (khong dung cho -healthy hay badge-success rai rac trong bang/log dai),
+   vi day la vai chuc o tom tat dau trang, khong phai hang tram dong trong bang -- muc dich la
+   keo mat nguoi dung ve cho co van de that su, khong lam nhieu giao dien. */
+@keyframes alertGlowWarning {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  50% { box-shadow: 0 0 10px 1px rgba(245, 158, 11, 0.35); }
+}
+
+@keyframes alertGlowCritical {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 12px 1px rgba(239, 68, 68, 0.4); }
+}
+
+/* Nguoi dung yeu cau giam chuyen dong (he dieu hanh) -- tat cac animation TU CHAY/lap lai
+   (entrance, pulse, shine, spin van giu vi no truyen tai trang thai "dang tai" that su, khong
+   phai trang tri don thuan). Cac transition hover/focus/active van giu nguyen vi chi chay khi
+   nguoi dung thao tac, khong tu dong lap. */
+@media (prefers-reduced-motion: reduce) {
+  .mini-stat,
+  .mini-stat-warning,
+  .mini-stat-critical,
+  .stat-chip,
+  .stat-chip-warning,
+  .stat-chip-critical,
+  .modal-overlay,
+  .modal-card,
+  .icon-copy-button.copied,
+  .copied-pop {
+    animation: none;
+  }
+
+  button:not(.button-secondary):not(.icon-copy-button):not(.ship-list-item):not(.area-selector):not(.metric-card-button)::after {
+    display: none;
+  }
 }

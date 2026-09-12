@@ -72,10 +72,6 @@ export const BulkAssign: React.FC = () => {
 
     return (
         <div>
-            <div className="top-bar">
-                <div><h1>Gán gói hàng loạt</h1><p className="page-subtitle">Đổi gói cước và/hoặc MikroTik (NAS) cho nhiều user cùng lúc.</p></div>
-            </div>
-
             {error && <DataStateNotice dataStatus="UNAVAILABLE" title="Không tải được dữ liệu" description={error} />}
 
             <div className="tab-row" role="tablist">

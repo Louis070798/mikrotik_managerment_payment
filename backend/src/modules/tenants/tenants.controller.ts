@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } fr
 import { RequirePermission } from '@auth-stub/auth-stub.guard';
 import { zodBody } from '@common/zod-validation.pipe';
 import { TenantsService } from './tenants.service';
-import { CreateTenantSchema, ListTenantsQuerySchema, UpdateTenantSchema } from './dto';
+import { CreateTenantSchema, ListTenantsQuerySchema, SetTenantPasswordSchema, UpdateTenantSchema } from './dto';
 
 @Controller('tenants')
 export class TenantsController {
@@ -38,5 +38,18 @@ export class TenantsController {
   @RequirePermission('tenant:write')
   async remove(@Param('tenantId') tenantId: string) {
     await this.service.remove(tenantId);
+  }
+
+  @Post(':tenantId/password')
+  @RequirePermission('tenant:write')
+  setPassword(@Param('tenantId') tenantId: string, @Body(zodBody(SetTenantPasswordSchema)) body: ReturnType<typeof SetTenantPasswordSchema['parse']>) {
+    return this.service.setPassword(tenantId, body.password);
+  }
+
+  @Delete(':tenantId/password')
+  @HttpCode(204)
+  @RequirePermission('tenant:write')
+  async revokePassword(@Param('tenantId') tenantId: string) {
+    await this.service.revokePassword(tenantId);
   }
 }

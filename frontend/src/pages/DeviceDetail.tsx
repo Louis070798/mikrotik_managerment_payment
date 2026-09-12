@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Area, AreaChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { InterfacesService, InventoryService, PackagesService, SubscribersService } from '../api';
 import type { Device } from '../api/models/Device';
 import type { Interface as ShipInterface } from '../api/models/Interface';
@@ -10,8 +10,10 @@ import type { Subscriber } from '../api/models/Subscriber';
 import type { Package } from '../api/models/Package';
 import { DataStateNotice } from '../components/DataStateNotice';
 import { MetricCard } from '../components/MetricCard';
+import { MiniStat } from '../components/MiniStat';
 import { SecretReveal } from '../components/SecretReveal';
-import { bytesToRateBps, formatBytes, formatPercent, formatRate, getApiErrorInfo, type DashboardGranularity } from '../lib/dashboard';
+import { VolumeSpeedChart } from '../components/VolumeSpeedChart';
+import { bytesToRateBps, combineBytes, combineGapBytes, formatBytes, formatPercent, formatRate, getApiErrorInfo, type DashboardGranularity } from '../lib/dashboard';
 
 type TrafficRange = '5m' | '1d' | '3d' | '7d';
 type Tab = 'Traffic' | 'Interface' | 'Người dùng' | 'Kết nối trực tiếp';
@@ -330,14 +332,12 @@ export const DeviceDetail: React.FC = () => {
 
     useEffect(() => { if (activeTab === 'Người dùng') void fetchUsers(); }, [activeTab, fetchUsers]);
 
-    const chartData = useMemo(() => {
-        const granularity = traffic?.period?.granularity ?? rangeOption.granularity;
-        return (traffic?.points ?? []).map(point => ({
-            time: point.bucket ? new Date(point.bucket).toLocaleString('vi-VN', range === '5m' || range === '1d' ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit' }) : '',
-            download_mbps: (bytesToRateBps(point.wan?.download_bytes ?? 0, granularity) ?? 0) / 1_000_000,
-            upload_mbps: (bytesToRateBps(point.wan?.upload_bytes ?? 0, granularity) ?? 0) / 1_000_000,
-        }));
-    }, [traffic, rangeOption.granularity, range]);
+    // .wan.download_bytes/.upload_bytes moi bucket -- dung nguyen cho VolumeSpeedChart (component
+    // dung chung, tu tinh ca bieu do cot khoi luong lan bieu do line toc do tu points tho nay).
+    const wanVolumePoints = useMemo(
+        () => (traffic?.points ?? []).map(point => ({ bucket: point.bucket, download_bytes: point.wan?.download_bytes, upload_bytes: point.wan?.upload_bytes })),
+        [traffic],
+    );
 
     const IFACE_CHART_COLORS = ['#009688', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899', '#84cc16', '#6366f1', '#f97316', '#06b6d4', '#a855f7'];
 
@@ -390,12 +390,13 @@ export const DeviceDetail: React.FC = () => {
     const totalUserQuota = subscribers.reduce((sum, s) => sum + (s.quota_used_bytes ?? 0), 0);
     const activeUserCount = subscribers.filter(s => s.status === 'ACTIVE').length;
 
-    const wanDown = formatBytes(traffic?.wan?.download_bytes);
-    const wanUp = formatBytes(traffic?.wan?.upload_bytes);
-    const countedDown = formatBytes(traffic?.reconciliation?.counted?.download_bytes);
-    const countedUp = formatBytes(traffic?.reconciliation?.counted?.upload_bytes);
-    const gapDownBytes = formatBytes(traffic?.reconciliation?.gap?.download_bytes);
-    const gapUpBytes = formatBytes(traffic?.reconciliation?.gap?.upload_bytes);
+    // Gop download+upload thanh 1 con so "tong data" -- trang nay khong can phan biet chieu, chi
+    // trang chi tiet ship (tab WAN & Reconciliation) moi can tach rieng tung chieu de dien doan.
+    const wanTotal = formatBytes(combineBytes(traffic?.wan?.download_bytes, traffic?.wan?.upload_bytes));
+    const countedTotal = formatBytes(combineBytes(traffic?.reconciliation?.counted?.download_bytes, traffic?.reconciliation?.counted?.upload_bytes));
+    const gap = combineGapBytes(traffic?.wan?.download_bytes, traffic?.wan?.upload_bytes, traffic?.reconciliation?.gap?.download_bytes, traffic?.reconciliation?.gap?.upload_bytes);
+    const gapTotal = formatBytes(gap.bytes);
+    const gapStatus: 'unknown' | 'healthy' | 'warning' | 'critical' = gap.pct == null ? 'unknown' : Math.abs(gap.pct) > 15 ? 'critical' : Math.abs(gap.pct) > 5 ? 'warning' : 'healthy';
 
     return (
         <div>
@@ -442,51 +443,19 @@ export const DeviceDetail: React.FC = () => {
                                 <div className="loading-block"><div className="loading-spinner" /><span>Đang tải traffic…</span></div>
                             ) : (
                                 <>
-                                    <div className="grid-cards">
-                                        <MetricCard title="WAN download (tổng)" value={wanDown.value} unit={wanDown.unit} period={rangeOption.label} source="interface_counter_deltas (WAN_INPUT)" freshness="Trực tiếp từ DB" status={traffic?.wan?.download_bytes == null ? 'unknown' : 'healthy'} />
-                                        <MetricCard title="WAN upload (tổng)" value={wanUp.value} unit={wanUp.unit} period={rangeOption.label} source="interface_counter_deltas (WAN_INPUT)" freshness="Trực tiếp từ DB" status={traffic?.wan?.upload_bytes == null ? 'unknown' : 'healthy'} />
+                                    <div className="mini-stat-row">
+                                        <MiniStat label="Tổng data WAN" value={wanTotal.value} unit={wanTotal.unit} hint={rangeOption.label} status={traffic?.wan?.download_bytes == null && traffic?.wan?.upload_bytes == null ? 'unknown' : 'healthy'} />
                                     </div>
 
-                                    {chartData.length > 0 && (
-                                        <div style={{ width: '100%', height: 240, marginTop: 16 }}>
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <AreaChart data={chartData}>
-                                                    <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis dataKey="time" fontSize={11} />
-                                                    <YAxis fontSize={11} unit=" Mbps" />
-                                                    <Tooltip formatter={(v) => `${Number(v).toFixed(2)} Mbps`} />
-                                                    <Legend />
-                                                    <Area type="monotone" dataKey="download_mbps" name="Download" stroke="#009688" fill="#009688" fillOpacity={0.25} />
-                                                    <Area type="monotone" dataKey="upload_mbps" name="Upload" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
-                                                </AreaChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    )}
+                                    <VolumeSpeedChart points={wanVolumePoints} granularity={traffic?.period?.granularity ?? rangeOption.granularity} compactTimeLabel={range === '5m' || range === '1d'} />
 
                                     <div className="section-heading" style={{ marginTop: 24 }}>
                                         <div><h2>Đối soát dữ liệu (kiểm đếm sai lệch)</h2><p>So tổng data thật đã lên server qua WAN với tổng đã gán cho CREW/BUSINESS/MANAGEMENT — cùng công thức đối soát cấp tàu, lọc riêng cho thiết bị này.</p></div>
                                     </div>
-                                    <div className="grid-cards">
-                                        <MetricCard title="Tổng WAN (đã lên server)" value={wanDown.value} unit={wanDown.unit} period={rangeOption.label} source="interface_counter_deltas (WAN_INPUT)" freshness="Trực tiếp từ DB" status={traffic?.wan?.download_bytes == null ? 'unknown' : 'healthy'} description={`Upload: ${wanUp.value} ${wanUp.unit}`} />
-                                        <MetricCard title="Tổng đã gán (CREW+BUSINESS+MGMT)" value={countedDown.value} unit={countedDown.unit} period={rangeOption.label} source="interface_counter_deltas (CREW/BUSINESS/MANAGEMENT)" freshness="Trực tiếp từ DB" status={traffic?.reconciliation?.counted?.download_bytes == null ? 'unknown' : 'healthy'} description={`Upload: ${countedUp.value} ${countedUp.unit}`} />
-                                        <MetricCard
-                                            title="Sai lệch download"
-                                            value={gapDownBytes.value}
-                                            unit={gapDownBytes.unit}
-                                            period={formatPercent(traffic?.reconciliation?.gap?.download_pct)}
-                                            source="WAN − (CREW+BUSINESS+MGMT)"
-                                            freshness="Trực tiếp từ DB"
-                                            status={traffic?.reconciliation?.gap?.download_pct == null ? 'unknown' : Math.abs(traffic.reconciliation.gap.download_pct) > 15 ? 'critical' : Math.abs(traffic.reconciliation.gap.download_pct) > 5 ? 'warning' : 'healthy'}
-                                        />
-                                        <MetricCard
-                                            title="Sai lệch upload"
-                                            value={gapUpBytes.value}
-                                            unit={gapUpBytes.unit}
-                                            period={formatPercent(traffic?.reconciliation?.gap?.upload_pct)}
-                                            source="WAN − (CREW+BUSINESS+MGMT)"
-                                            freshness="Trực tiếp từ DB"
-                                            status={traffic?.reconciliation?.gap?.upload_pct == null ? 'unknown' : Math.abs(traffic.reconciliation.gap.upload_pct) > 15 ? 'critical' : Math.abs(traffic.reconciliation.gap.upload_pct) > 5 ? 'warning' : 'healthy'}
-                                        />
+                                    <div className="mini-stat-row">
+                                        <MiniStat label="Tổng WAN (đã lên server)" value={wanTotal.value} unit={wanTotal.unit} hint={rangeOption.label} status={traffic?.wan?.download_bytes == null && traffic?.wan?.upload_bytes == null ? 'unknown' : 'healthy'} />
+                                        <MiniStat label="Tổng đã gán (CREW+BUSINESS+MGMT)" value={countedTotal.value} unit={countedTotal.unit} hint={rangeOption.label} status={traffic?.reconciliation?.counted?.download_bytes == null && traffic?.reconciliation?.counted?.upload_bytes == null ? 'unknown' : 'healthy'} />
+                                        <MiniStat label="Sai lệch" value={gapTotal.value} unit={gapTotal.unit} hint={gap.pct == null ? 'Chưa có %' : `${formatPercent(gap.pct)} so với tổng WAN`} status={gapStatus} />
                                     </div>
                                     <p className="muted-text" style={{ fontSize: 12, marginTop: 8 }}>Sai lệch dương = còn traffic WAN chưa được gán vào interface CREW/BUSINESS/MANAGEMENT nào (vd interface đang để "NONE"). Không phải lỗi hệ thống — kiểm tra lại tab Interface để gán đúng nhóm đối soát.</p>
                                 </>

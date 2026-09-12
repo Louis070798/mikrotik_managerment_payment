@@ -62,7 +62,8 @@ export class SubscribersService {
         });
     }
     /**
-     * Tao subscriber moi (gan tenant + goi cuoc, tuy chon NAS)
+     * Tao subscriber moi (gan tenant + goi cuoc, tuy chon NAS) -- mat khau do ADMIN TU GO trong requestBody
+     * Subscriber la 1 tai khoan dang nhap Hotspot/PPPoE that. Mat khau do admin nhap truc tiep qua requestBody.password, khong con tu sinh ngau nhien nua. Server chi giu ban bam, khong bao gio tra lai qua response nao.
      * @returns any Created
      * @throws ApiError
      */
@@ -237,16 +238,55 @@ export class SubscribersService {
         });
     }
     /**
-     * Cap mat khau RADIUS moi cho subscriber
-     * Sinh mat khau that ngau nhien, bam scrypt luu lai (backend/src/libs/password-hash/), tra plaintext DUY NHAT 1 LAN. RADIUS Access-Request (PAP) ke tiep tu router dung duoc ngay.
+     * Reset quota_used_bytes ve 0 cho subscriber
+     * Tac vu quan ly rieng (khong phai 1 field PATCH thuong) -- danh cho tinh huong "cap lai/gia han dung luong" cho 1 user, co audit log rieng (subscriber.reset_quota).
+     * @returns any Created
+     * @throws ApiError
+     */
+    public static postSubscribersResetQuota({
+        subscriberId,
+        xActorPermissions,
+    }: {
+        subscriberId: string,
+        /**
+         * TAM THOI (AuthStubGuard, chua phai Auth/RBAC that) -- CSV permission actor duoc cap. Thieu quyen bat buoc -> 403 FORBIDDEN.
+         */
+        xActorPermissions?: string,
+    }): CancelablePromise<{
+        data?: Subscriber;
+        meta?: BaseMeta;
+        error?: ErrorDetails | null;
+    }> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/subscribers/{subscriberId}/reset-quota',
+            path: {
+                'subscriberId': subscriberId,
+            },
+            headers: {
+                'x-actor-permissions': xActorPermissions,
+            },
+            errors: {
+                403: `FORBIDDEN -- thieu permission`,
+                404: `Not found`,
+            },
+        });
+    }
+    /**
+     * Dat mat khau RADIUS moi cho subscriber, do admin tu go
+     * Mat khau lay tu requestBody.password (khong con tu sinh ngau nhien), bam scrypt luu lai (backend/src/libs/password-hash/). RADIUS Access-Request (PAP) ke tiep tu router dung duoc ngay.
      * @returns any Created
      * @throws ApiError
      */
     public static postSubscribersPassword({
         subscriberId,
+        requestBody,
         xActorPermissions,
     }: {
         subscriberId: string,
+        requestBody: {
+            password: string;
+        },
         /**
          * TAM THOI (AuthStubGuard, chua phai Auth/RBAC that) -- CSV permission actor duoc cap. Thieu quyen bat buoc -> 403 FORBIDDEN.
          */
@@ -265,6 +305,8 @@ export class SubscribersService {
             headers: {
                 'x-actor-permissions': xActorPermissions,
             },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 403: `FORBIDDEN -- thieu permission`,
                 404: `Not found`,

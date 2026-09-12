@@ -126,11 +126,6 @@ export const Packages: React.FC = () => {
 
     return (
         <div>
-            <div className="top-bar">
-                <div><h1>Gói cước</h1><p className="page-subtitle">Quản lý gói cước PPPoE/Hotspot — tốc độ, quota, thời hạn và giá.</p></div>
-                <span className="freshness-indicator">{loading ? 'Đang tải…' : `${packages.length} gói`}</span>
-            </div>
-
             {error && <DataStateNotice dataStatus="UNAVAILABLE" title="Không tải được danh sách gói cước" description={error} onRetry={() => void fetchData()} />}
 
             {loading && packages.length === 0 ? (

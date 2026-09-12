@@ -5,6 +5,7 @@ import { tenants, subscribers } from '@db/schema';
 import { ApiException } from '@common/api-exception';
 import { AuditService } from '@audit/audit.service';
 import { diffOf } from '@common/diff';
+import { hashPassword } from '@password-hash/password-hash';
 import { CreateTenantInput, UpdateTenantInput } from './dto';
 
 export interface ListTenantsFilter {
@@ -22,6 +23,10 @@ function toApi(row: typeof tenants.$inferSelect) {
     contact_email: row.contactEmail,
     address: row.address,
     tax_id: row.taxId,
+    username: row.username,
+    // Khong bao gio tra hash -- chi bao da cap hay chua (cung convention subscribers.password_configured).
+    password_configured: row.passwordHash !== null,
+    password_issued_at: row.passwordIssuedAt?.toISOString() ?? null,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };
@@ -52,6 +57,12 @@ export class TenantsService {
     return toApi(row);
   }
 
+  /**
+   * Tenant la 1 tai khoan dang nhap that (AuthService.login()) — username van tu sinh tu code nhu
+   * truoc, nhung MAT KHAU do ADMIN TU GO (input.password bat buoc) -- khong con tu sinh ngau nhien
+   * nua (bo tinh nang "cap mat khau" tu dong theo yeu cau nguoi dung). Server chi giu ban bam
+   * (scrypt), khong bao gio tra lai mat khau qua toApi() (list/get/update).
+   */
   async create(input: CreateTenantInput) {
     if (input.parent_id) {
       const parent = await this.db.query.tenants.findFirst({
@@ -66,6 +77,8 @@ export class TenantsService {
     const existing = await this.db.query.tenants.findFirst({ where: and(eq(tenants.code, input.code), isNull(tenants.deletedAt)) });
     if (existing) throw new ApiException('RESOURCE_CONFLICT', `Tenant code '${input.code}' is already in use`, { code: input.code });
 
+    const username = await this.generateUsername(input.code);
+
     const [row] = await this.db
       .insert(tenants)
       .values({
@@ -77,10 +90,19 @@ export class TenantsService {
         contactEmail: input.contact_email ?? null,
         address: input.address ?? null,
         taxId: input.tax_id ?? null,
+        username,
+        passwordHash: hashPassword(input.password),
+        passwordIssuedAt: new Date(),
       })
       .returning();
 
-    await this.audit.record({ action: 'tenant.create', resourceType: 'tenant', resourceId: row.id, after: toApi(row), result: 'SUCCESS' });
+    await this.audit.record({
+      action: 'tenant.create',
+      resourceType: 'tenant',
+      resourceId: row.id,
+      after: toApi(row),
+      result: 'SUCCESS',
+    });
     return toApi(row);
   }
 
@@ -134,5 +156,62 @@ export class TenantsService {
 
     await this.db.update(tenants).set({ deletedAt: new Date() }).where(eq(tenants.id, id));
     await this.audit.record({ action: 'tenant.delete', resourceType: 'tenant', resourceId: id, before: toApi(before), result: 'SUCCESS' });
+  }
+
+  /** Sinh username duy nhat tu code (vd "ABC-01" -> "abc-01", them hau to so neu trung). */
+  private async generateUsername(code: string, excludeId?: string): Promise<string> {
+    const base = code.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'tenant';
+    let candidate = base;
+    let suffix = 1;
+    for (;;) {
+      const owner = await this.db.query.tenants.findFirst({ where: and(eq(tenants.username, candidate), isNull(tenants.deletedAt)) });
+      if (!owner || owner.id === excludeId) return candidate;
+      suffix += 1;
+      candidate = `${base}-${suffix}`;
+    }
+  }
+
+  /**
+   * Dat mat khau dang nhap cho tenant nay BANG MAT KHAU ADMIN TU GO -- khong con tu sinh ngau
+   * nhien (bo tinh nang "cap mat khau" tu dong). Tu sinh username tu code neu tenant chua co.
+   * Khong tra plaintext ve nua (admin da biet minh vua go gi).
+   */
+  async setPassword(id: string, password: string) {
+    const before = await this.db.query.tenants.findFirst({ where: and(eq(tenants.id, id), isNull(tenants.deletedAt)) });
+    if (!before) throw new ApiException('TENANT_NOT_FOUND', `Tenant ${id} not found`);
+
+    const username = before.username ?? (await this.generateUsername(before.code, id));
+    const passwordIssuedAt = new Date();
+    await this.db
+      .update(tenants)
+      .set({ username, passwordHash: hashPassword(password), passwordIssuedAt, updatedAt: passwordIssuedAt })
+      .where(eq(tenants.id, id));
+
+    await this.audit.record({
+      action: 'tenant.password_issue',
+      resourceType: 'tenant',
+      resourceId: id,
+      before: { username: before.username, password_configured: before.passwordHash !== null },
+      after: { username, password_configured: true },
+      result: 'SUCCESS',
+    });
+
+    return { username, issued_at: passwordIssuedAt.toISOString() };
+  }
+
+  async revokePassword(id: string) {
+    const before = await this.db.query.tenants.findFirst({ where: and(eq(tenants.id, id), isNull(tenants.deletedAt)) });
+    if (!before) throw new ApiException('TENANT_NOT_FOUND', `Tenant ${id} not found`);
+
+    await this.db.update(tenants).set({ passwordHash: null, passwordIssuedAt: null, updatedAt: new Date() }).where(eq(tenants.id, id));
+
+    await this.audit.record({
+      action: 'tenant.password_revoke',
+      resourceType: 'tenant',
+      resourceId: id,
+      before: { password_configured: before.passwordHash !== null },
+      after: { password_configured: false },
+      result: 'SUCCESS',
+    });
   }
 }

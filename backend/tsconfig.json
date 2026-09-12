@@ -36,7 +36,8 @@
       "@secrets/*": ["src/libs/secrets/*"],
       "@inventory-cache/*": ["src/libs/inventory-cache/*"],
       "@password-hash/*": ["src/libs/password-hash/*"],
-      "@radius-coa/*": ["src/libs/radius-coa/*"]
+      "@radius-coa/*": ["src/libs/radius-coa/*"],
+      "@debug-log/*": ["src/libs/debug-log/*"]
     }
   },
   "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"]

@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+    Activity, ArrowDown, ArrowUp, Cable, CircleCheck, CircleHelp, CirclePause, CircleX, Database,
+    EthernetPort, Gauge, Network, Plug, Server, TriangleAlert, User, UserCheck, Users, Wifi,
+} from 'lucide-react';
 import { InterfacesService, InventoryService, PackagesService, SubscribersService } from '../api';
 import type { Device } from '../api/models/Device';
 import type { Interface as ShipInterface } from '../api/models/Interface';
@@ -104,6 +108,35 @@ function statusOf(state?: string): 'healthy' | 'warning' | 'critical' | 'unknown
     if (state === 'DEGRADED') return 'warning';
     if (state === 'OFFLINE' || state === 'DOWN') return 'critical';
     return 'unknown';
+}
+
+const TAB_ICONS: Record<Tab, React.ReactNode> = {
+    Traffic: <Activity size={15} />,
+    Interface: <Network size={15} />,
+    'Người dùng': <Users size={15} />,
+    'Kết nối trực tiếp': <Plug size={15} />,
+};
+
+// Icon theo loại interface thật (RouterOS iface.type) — chỉ để nhận diện nhanh bằng mắt, không suy
+// diễn thêm thông tin gì ngoài tên loại router đã báo.
+function ifaceTypeIcon(type?: string | null) {
+    const t = (type ?? '').toLowerCase();
+    if (t.includes('wlan') || t.includes('wifi') || t.includes('wireless')) return <Wifi size={14} />;
+    if (t.includes('bridge') || t.includes('vlan') || t.includes('bond')) return <Network size={14} />;
+    if (t.includes('ether')) return <EthernetPort size={14} />;
+    return <Cable size={14} />;
+}
+
+const STATUS_ICON: Record<'healthy' | 'warning' | 'critical' | 'unknown', { Icon: typeof CircleCheck; color: string }> = {
+    healthy: { Icon: CircleCheck, color: 'var(--success)' },
+    warning: { Icon: TriangleAlert, color: 'var(--warning)' },
+    critical: { Icon: CircleX, color: 'var(--danger)' },
+    unknown: { Icon: CircleHelp, color: 'var(--text-muted)' },
+};
+
+function StatusIcon({ state, size = 14 }: { state?: string; size?: number }) {
+    const { Icon, color } = STATUS_ICON[statusOf(state)];
+    return <Icon size={size} color={color} style={{ flex: 'none' }} />;
 }
 
 export const DeviceDetail: React.FC = () => {
@@ -414,7 +447,7 @@ export const DeviceDetail: React.FC = () => {
                 <div className="loading-block"><div className="loading-spinner" /><span>Đang tải chi tiết thiết bị…</span></div>
             ) : device ? (
                 <>
-                    <div className="tab-row" role="tablist">{tabs.map(tab => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
+                    <div className="tab-row" role="tablist">{tabs.map(tab => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{TAB_ICONS[tab]}{tab}</button>)}</div>
 
                     <div className="dashboard-meta" style={{ marginTop: '0.6rem' }}>
                         <span className={`status-dot ${statusOf(device.status)}`}><strong>Trạng thái:</strong>&nbsp;{device.status ?? 'UNKNOWN'}</span>
@@ -466,7 +499,7 @@ export const DeviceDetail: React.FC = () => {
                     {activeTab === 'Interface' && (
                         <section className="glass-panel dashboard-section">
                             <div className="section-heading">
-                                <div><h2>Bandwidth theo từng interface</h2><p>Mỗi đường/hàng là 1 interface thật (rx+tx gộp), tính từ interface_counter_deltas.</p></div>
+                                <div><h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Gauge size={18} style={{ opacity: 0.75 }} />Bandwidth theo từng interface</h2><p>Mỗi đường/hàng là 1 interface thật (rx+tx gộp), tính từ interface_counter_deltas.</p></div>
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                                     <div className="tab-row" role="tablist">
                                         {RANGE_OPTIONS.map(opt => <button key={opt.key} type="button" role="tab" aria-selected={range === opt.key} className={range === opt.key ? 'active' : ''} onClick={() => setRange(opt.key)}>{opt.label}</button>)}
@@ -527,7 +560,7 @@ export const DeviceDetail: React.FC = () => {
 
                             <div className="section-heading" style={{ marginTop: 24 }}>
                                 <div>
-                                    <h2>Toàn bộ dữ liệu nhận được từ MikroTik</h2>
+                                    <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Server size={18} style={{ opacity: 0.75 }} />Toàn bộ dữ liệu nhận được từ MikroTik</h2>
                                     <p>Nguyên văn payload mỗi lần push — counter cộng dồn từ lúc router boot (không phải delta), packets/errors/drops chỉ khác "—" khi router thật sự gửi trường đó.</p>
                                 </div>
                                 <span>{interfaces.length} interface</span>
@@ -543,7 +576,7 @@ export const DeviceDetail: React.FC = () => {
                                     <thead>
                                         <tr>
                                             <th>Interface</th><th>Loại</th><th>Nhóm đối soát</th><th>Trạng thái</th><th>Tốc độ danh định</th>
-                                            <th>RX bytes (cộng dồn)</th><th>TX bytes (cộng dồn)</th><th>RX packets</th><th>TX packets</th><th>RX errors</th><th>TX errors</th><th>RX drops</th><th>TX drops</th>
+                                            <th><ArrowDown size={12} style={{ verticalAlign: -1 }} /> RX bytes (cộng dồn)</th><th><ArrowUp size={12} style={{ verticalAlign: -1 }} /> TX bytes (cộng dồn)</th><th>RX packets</th><th>TX packets</th><th>RX errors</th><th>TX errors</th><th>RX drops</th><th>TX drops</th>
                                             <th>Lần đọc gần nhất</th><th>Data tháng này</th>
                                         </tr>
                                     </thead>
@@ -555,10 +588,10 @@ export const DeviceDetail: React.FC = () => {
                                             const n = (v: number | null | undefined) => v != null ? v.toLocaleString('vi-VN') : '—';
                                             return (
                                                 <tr key={iface.id}>
-                                                    <td><strong>{iface.name}</strong></td>
+                                                    <td><strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{ifaceTypeIcon(iface.type)}{iface.name}</strong></td>
                                                     <td>{iface.type ?? 'Không rõ'}</td>
                                                     <td>{iface.accounting_group ?? 'NONE'}</td>
-                                                    <td><span className={`status-dot ${statusOf(iface.oper_state)}`}>{iface.admin_state ?? 'UNKNOWN'} / {iface.oper_state ?? 'UNKNOWN'}</span></td>
+                                                    <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><StatusIcon state={iface.oper_state} />{iface.admin_state ?? 'UNKNOWN'} / {iface.oper_state ?? 'UNKNOWN'}</span></td>
                                                     <td>{formatRate(iface.speed_bps).value} {formatRate(iface.speed_bps).unit}</td>
                                                     <td>{latest ? `${formatBytes(latest.rx_bytes).value} ${formatBytes(latest.rx_bytes).unit}` : 'Chưa có dữ liệu'}</td>
                                                     <td>{latest ? `${formatBytes(latest.tx_bytes).value} ${formatBytes(latest.tx_bytes).unit}` : 'Chưa có dữ liệu'}</td>
@@ -582,7 +615,7 @@ export const DeviceDetail: React.FC = () => {
 
                     {activeTab === 'Người dùng' && (
                         <section className="glass-panel dashboard-section">
-                            <div className="section-heading"><div><h2>Người dùng gán vào thiết bị này</h2><p>Subscriber PPPoE/Hotspot có NAS = thiết bị này.</p></div><span>{subscribers.length} user</span></div>
+                            <div className="section-heading"><div><h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Users size={18} style={{ opacity: 0.75 }} />Người dùng gán vào thiết bị này</h2><p>Subscriber PPPoE/Hotspot có NAS = thiết bị này.</p></div><span>{subscribers.length} user</span></div>
 
                             {usersError && <DataStateNotice dataStatus="UNAVAILABLE" title="Không tải được danh sách user" description={usersError} onRetry={() => void fetchUsers()} />}
 
@@ -591,9 +624,9 @@ export const DeviceDetail: React.FC = () => {
                             ) : (
                                 <>
                                     <div className="grid-cards">
-                                        <MetricCard title="Tổng user" value={subscribers.length} unit="user" period="Hiện tại" source="subscribers.nas_device_id" freshness="Trực tiếp từ DB" status="healthy" />
-                                        <MetricCard title="User đang hoạt động" value={activeUserCount} unit="user" period="Hiện tại" source="subscribers.status" freshness="Trực tiếp từ DB" status="healthy" />
-                                        <MetricCard title="Tổng data đã dùng" value={formatBytes(totalUserQuota).value} unit={formatBytes(totalUserQuota).unit} period="Cộng dồn" source="subscribers.quota_used_bytes" freshness="Trực tiếp từ DB" status="healthy" />
+                                        <MetricCard icon={<Users size={15} />} title="Tổng user" value={subscribers.length} unit="user" period="Hiện tại" source="subscribers.nas_device_id" freshness="Trực tiếp từ DB" status="healthy" />
+                                        <MetricCard icon={<UserCheck size={15} />} title="User đang hoạt động" value={activeUserCount} unit="user" period="Hiện tại" source="subscribers.status" freshness="Trực tiếp từ DB" status="healthy" />
+                                        <MetricCard icon={<Database size={15} />} title="Tổng data đã dùng" value={formatBytes(totalUserQuota).value} unit={formatBytes(totalUserQuota).unit} period="Cộng dồn" source="subscribers.quota_used_bytes" freshness="Trực tiếp từ DB" status="healthy" />
                                     </div>
                                     <div className="table-shell" style={{ marginTop: 12 }}>
                                         <table className="data-table">
@@ -601,11 +634,16 @@ export const DeviceDetail: React.FC = () => {
                                             <tbody>
                                                 {subscribers.map(sub => (
                                                     <tr key={sub.id}>
-                                                        <td><Link to={`/users/${sub.id}`}><strong>{sub.username}</strong></Link></td>
+                                                        <td><Link to={`/users/${sub.id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><User size={14} style={{ opacity: 0.7 }} /><strong>{sub.username}</strong></Link></td>
                                                         <td>{packageName(sub.package_id)}</td>
                                                         <td>{formatBytes(sub.quota_used_bytes).value} {formatBytes(sub.quota_used_bytes).unit}</td>
                                                         <td>{sub.expires_at ? new Date(sub.expires_at).toLocaleDateString('vi-VN') : 'Không rõ'}</td>
-                                                        <td><span className={`status-dot ${sub.status === 'ACTIVE' ? 'healthy' : sub.status === 'SUSPENDED' ? 'warning' : 'critical'}`}>{sub.status}</span></td>
+                                                        <td>
+                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                                                {sub.status === 'ACTIVE' ? <CircleCheck size={14} color="var(--success)" /> : sub.status === 'SUSPENDED' ? <CirclePause size={14} color="var(--warning)" /> : <CircleX size={14} color="var(--danger)" />}
+                                                                {sub.status}
+                                                            </span>
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>

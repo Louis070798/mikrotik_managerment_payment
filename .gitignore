@@ -22,6 +22,7 @@ _dev_run_frontend.log
 _to_delete/
 _sync-temp.tar.gz
 *.tar.gz
+*.zip
 
 # OS / editor
 .DS_Store

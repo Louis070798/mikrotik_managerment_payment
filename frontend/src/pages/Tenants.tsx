@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Building2, CornerDownRight, KeyRound, ShieldCheck, ShieldOff } from 'lucide-react';
 import { TenantsService } from '../api';
 import type { Tenant } from '../api/models/Tenant';

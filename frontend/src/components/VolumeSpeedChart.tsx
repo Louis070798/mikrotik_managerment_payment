@@ -46,7 +46,7 @@ export const VolumeSpeedChart: React.FC<Props> = ({ points, granularity, compact
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="time" fontSize={11} />
                             <YAxis fontSize={11} unit={` ${unit.label}`} />
-                            <Tooltip formatter={(v: number) => `${Number(v).toFixed(2)} ${unit.label}`} />
+                            <Tooltip formatter={(v) => `${Number(v ?? 0).toFixed(2)} ${unit.label}`} />
                             <Legend />
                             <Bar dataKey="download_scaled" name="Download" stackId="volume" fill="#009688" />
                             <Bar dataKey="upload_scaled" name="Upload" stackId="volume" fill="#3b82f6" />
@@ -62,7 +62,7 @@ export const VolumeSpeedChart: React.FC<Props> = ({ points, granularity, compact
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="time" fontSize={11} />
                             <YAxis fontSize={11} unit=" Mbps" />
-                            <Tooltip formatter={(v: number) => `${Number(v).toFixed(2)} Mbps`} />
+                            <Tooltip formatter={(v) => `${Number(v ?? 0).toFixed(2)} Mbps`} />
                             <Legend />
                             <Line type="monotone" dataKey="download_mbps" name="Download" stroke="#009688" strokeWidth={2} dot={false} />
                             <Line type="monotone" dataKey="upload_mbps" name="Upload" stroke="#3b82f6" strokeWidth={2} dot={false} />

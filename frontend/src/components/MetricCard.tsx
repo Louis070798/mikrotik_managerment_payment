@@ -11,10 +11,11 @@ interface MetricCardProps {
     status: 'healthy' | 'warning' | 'critical' | 'unknown';
     onClick?: () => void;
     description?: string;
+    icon?: React.ReactNode;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
-    title, value, unit = '', period, source, freshness, previousComparison, status, onClick, description
+    title, value, unit = '', period, source, freshness, previousComparison, status, onClick, description, icon
 }) => {
     const statusColors = {
         healthy: 'var(--success)',
@@ -26,7 +27,10 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     const content = (
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
-                <span className="stat-title">{title}</span>
+                <span className="stat-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    {icon && <span style={{ display: 'inline-flex', opacity: 0.75 }}>{icon}</span>}
+                    {title}
+                </span>
                 <span className="state-badge" style={{ background: 'transparent', color: statusColors[status], border: `1px solid ${statusColors[status]}` }}>
                     {status.toUpperCase()}
                 </span>

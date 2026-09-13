@@ -1,0 +1,27 @@
+name: zerotier-dashboard
+
+services:
+  dashboard:
+    build:
+      context: ../frontend
+      args:
+        VITE_BASE_PATH: /app/
+    image: mikrotik-zerotier-dashboard:local
+    restart: unless-stopped
+    environment:
+      # Backend NestJS đang chạy trên host ở :3000. Có thể đổi thành URL nội bộ khác.
+      API_UPSTREAM: ${API_UPSTREAM:-http://host.docker.internal:3000}
+      # Không để entrypoint Nginx thay nhầm các biến runtime như $uri, $host, $scheme.
+      NGINX_ENVSUBST_FILTER: ^API_UPSTREAM$
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${ZEROTIER_DASHBOARD_PORT:-4000}:4000"
+    read_only: true
+    tmpfs:
+      - /etc/nginx/conf.d
+      - /var/cache/nginx
+      - /var/run
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

@@ -30,7 +30,7 @@ export const CategoryVolumeBarChart: React.FC<Props> = ({ items, barColor = '#00
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="label" fontSize={11} interval={0} angle={rows.length > 6 ? -25 : 0} textAnchor={rows.length > 6 ? 'end' : 'middle'} height={rows.length > 6 ? 46 : 24} />
                     <YAxis fontSize={11} unit={` ${unit.label}`} />
-                    <Tooltip formatter={(v: number) => `${Number(v).toFixed(2)} ${unit.label}`} />
+                    <Tooltip formatter={(v) => `${Number(v ?? 0).toFixed(2)} ${unit.label}`} />
                     <Bar dataKey="scaled" fill={barColor} radius={[4, 4, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>

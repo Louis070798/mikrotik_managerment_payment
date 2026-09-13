@@ -25,7 +25,7 @@ import { PagePlaceholder } from './components/PagePlaceholder';
 
 function App() {
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
       <Routes>
         <Route path="/login" element={<Login />} />
 

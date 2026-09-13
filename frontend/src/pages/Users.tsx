@@ -103,7 +103,6 @@ export const Users: React.FC = () => {
 
     const packageName = (id?: string | null) => packages.find(p => p.id === id)?.name ?? 'Không rõ';
     const tenantName = (id?: string | null) => tenants.find(t => t.id === id)?.name ?? 'Không rõ';
-    const deviceName = (id?: string | null) => devices.find(d => d.id === id)?.name ?? 'Chưa gán';
     const quotaOf = (id?: string | null) => packages.find(p => p.id === id)?.quota_gb ?? 0;
 
     const kpiTotal = allForKpi.length;

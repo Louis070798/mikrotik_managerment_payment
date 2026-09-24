@@ -57,6 +57,26 @@ AAA database:
 
 ## 4. Register service endpoints
 
+> **Bước này KHÔNG tự động.** Không migration hay seed nào chèn dòng `service_endpoints`.
+> Bỏ qua nó thì hệ thống vẫn chạy nhưng trang **VPN ZeroTier** trả 422
+> `ZEROTIER_NOT_CONFIGURED` và `GET /ships/{id}/crew/radius-health` luôn `UNKNOWN`.
+>
+> Chạy:
+> ```bash
+> cd backend
+> npm run services:register -- --list      # xem hiện có gì
+> npm run services:register -- --dry-run   # xem sẽ làm gì
+> npm run services:register                # ghi thật (idempotent)
+> ```
+> Script chỉ đăng ký service nào đã có đủ biến môi trường thật (xem `backend/.env.example`,
+> mục *service_endpoints bootstrap*); thiếu biến thì **bỏ qua kèm hướng dẫn**, không tự bịa
+> địa chỉ. Sau khi ghi, restart backend vì `ServiceRegistry` có cache trong process.
+>
+> **An toàn với dữ liệu thật:** script không bao giờ xoá dòng nào. Dòng đã tồn tại nhưng khác
+> cấu hình trong `.env` thì **mặc định bỏ qua** (có thể người vận hành đã chỉnh tay có chủ
+> đích) — chỉ ghi đè khi truyền `--force-update`, và mỗi lần ghi đều lưu bản cũ vào
+> `service_endpoint_revisions`.
+
 Sau khi service sống, đăng ký endpoint qua service registry của backend:
 
 - `radius.auth` và `radius.accounting` tối thiểu hai endpoint;

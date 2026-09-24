@@ -194,8 +194,11 @@ DATABASE_AAA_URL=postgres://radius:MAT_KHAU_DA_MA_HOA@10.149.79.186:5432/radius
 ```
 
 > **Mật khẩu phải được mã hoá URL.** Các ký tự `@ : / ? # [ ] %` là ký tự phân tách trong URL —
-> viết thẳng vào là chuỗi kết nối hỏng theo kiểu rất khó đoán. Ví dụ `aoas@2025` phải viết thành
-> `aoas%402025`. Riêng biến `PGPASSWORD` ở các bước trên thì giữ nguyên, không mã hoá.
+> viết thẳng vào là chuỗi kết nối hỏng theo kiểu rất khó đoán. Ví dụ mật khẩu `p@ssw0rd` phải
+> viết thành `p%40ssw0rd` (`@` → `%40`). Riêng biến `PGPASSWORD` ở các bước trên thì giữ nguyên,
+> không mã hoá.
+>
+> **Không viết mật khẩu thật vào tài liệu trong repo này — repo đang ở chế độ public.**
 
 Khởi động lại backend, log phải có:
 

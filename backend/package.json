@@ -10,6 +10,7 @@
     "start:dev": "nest start --watch",
     "migrate": "tsx scripts/migrate.ts",
     "admin:create": "tsx scripts/create-admin.ts",
+    "services:register": "tsx scripts/register-services.ts",
     "migrate:test": "tsx scripts/migrate.ts --env=.env.test",
     "seed:test": "tsx scripts/seed-test.ts --env=.env.test",
     "db:check": "drizzle-kit check",

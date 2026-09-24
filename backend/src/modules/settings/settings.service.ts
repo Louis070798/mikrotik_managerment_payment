@@ -11,8 +11,16 @@ export interface SettingsSnapshot {
     username: string | null;
     password_configured: boolean;
   };
+  /**
+   * Địa chỉ server RADIUS như ROUTER nhìn thấy (thường là IP ZeroTier của server) — KHÔNG phải
+   * địa chỉ backend tự bind. Chỉ dùng để sinh lệnh "/radius add address=..." cho MikroTik, server
+   * không bao giờ tự kết nối tới nó, nên đây không phải endpoint dịch vụ theo ADR-04.
+   */
+  radius_server_address: string | null;
   radius_auth_port: number;
   radius_acct_port: number;
+  /** Cổng CoA/Disconnect mà ROUTER lắng nghe (RFC 5176, RouterOS "/radius incoming"). */
+  radius_coa_port: number;
   netflow_port: number;
   dns_log_port: number;
   zerotier_controller_token_configured: boolean;
@@ -47,8 +55,10 @@ export class SettingsService {
   getCurrent(): SettingsSnapshot {
     return {
       database: this.parseDatabaseUrl(this.envStore.get('DATABASE_CONTROL_URL')),
+      radius_server_address: this.envStore.get('RADIUS_SERVER_ADDRESS') || null,
       radius_auth_port: Number(this.envStore.get('RADIUS_AUTH_PORT') ?? 1812),
       radius_acct_port: Number(this.envStore.get('RADIUS_ACCT_PORT') ?? 1813),
+      radius_coa_port: Number(this.envStore.get('RADIUS_COA_PORT') ?? 3799),
       netflow_port: Number(this.envStore.get('NETFLOW_PORT') ?? 2055),
       dns_log_port: Number(this.envStore.get('DNS_LOG_PORT') ?? 5514),
       zerotier_controller_token_configured: !!this.envStore.get('ZEROTIER_CONTROLLER_TOKEN'),
@@ -75,6 +85,14 @@ export class SettingsService {
       if (input.database.password) u.password = input.database.password;
       this.envStore.set('DATABASE_CONTROL_URL', u.toString());
       changedKeys.push('DATABASE_CONTROL_URL');
+    }
+    if (input.radius_server_address !== undefined) {
+      this.envStore.set('RADIUS_SERVER_ADDRESS', input.radius_server_address);
+      changedKeys.push('RADIUS_SERVER_ADDRESS');
+    }
+    if (input.radius_coa_port !== undefined) {
+      this.envStore.set('RADIUS_COA_PORT', String(input.radius_coa_port));
+      changedKeys.push('RADIUS_COA_PORT');
     }
     if (input.radius_auth_port !== undefined) {
       this.envStore.set('RADIUS_AUTH_PORT', String(input.radius_auth_port));

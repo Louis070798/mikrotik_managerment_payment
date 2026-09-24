@@ -13,10 +13,12 @@ export type SettingsUpdateRequest = {
          */
         password?: string;
     };
+    radius_server_address?: string;
     radius_auth_port?: number;
     radius_acct_port?: number;
     netflow_port?: number;
     dns_log_port?: number;
+    radius_coa_port?: number;
     /**
      * Rong/thieu = giu nguyen.
      */

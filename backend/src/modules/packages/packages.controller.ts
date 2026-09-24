@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
-import { RequirePermission } from '@auth-stub/auth-stub.guard';
+import { RequirePermission, TenantScoped } from '@auth-stub/auth-stub.guard';
 import { zodBody } from '@common/zod-validation.pipe';
 import { PackagesService } from './packages.service';
 import { CreatePackageSchema, ListPackagesQuerySchema, UpdatePackageSchema } from './dto';
@@ -10,6 +10,7 @@ export class PackagesController {
 
   @Get()
   @RequirePermission('package:read')
+  @TenantScoped()
   list(@Query() query: Record<string, string>) {
     const parsed = ListPackagesQuerySchema.parse(query);
     return this.service.list({ tenantId: parsed.tenant_id });
@@ -17,6 +18,7 @@ export class PackagesController {
 
   @Get(':packageId')
   @RequirePermission('package:read')
+  @TenantScoped()
   getOne(@Param('packageId') packageId: string) {
     return this.service.getById(packageId);
   }

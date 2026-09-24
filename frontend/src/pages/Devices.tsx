@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DefaultService, TenantsService } from '../api';
+import { DefaultService, SettingsService, TenantsService } from '../api';
 import { InventoryService } from '../api/services/InventoryService';
 import { Device } from '../api/models/Device';
 import type { ShipItem } from '../api/models/ShipItem';
 import type { Tenant } from '../api/models/Tenant';
-import { Router, Activity, AlertCircle, RefreshCw, Circle, CheckCircle2 } from 'lucide-react';
-import { SecretReveal } from '../components/SecretReveal';
-import { combineBytes, formatBytes, getApiErrorInfo } from '../lib/dashboard';
+import { Router, Activity, AlertCircle, RefreshCw, Circle, CheckCircle2, Shuffle } from 'lucide-react';
+import { combineBytes, formatBytes, formatLastSeen, getApiErrorInfo } from '../lib/dashboard';
 import { buildFleetConfigFromOptions, DEFAULT_FLEET_CONFIG_OPTIONS, type FleetConfigOptions, type WanMode } from '../lib/routerosConfigTemplate';
+import { generateRandomHex } from '../lib/randomToken';
 
 const DEFAULT_AREA_CODE = 'DEFAULT';
 
@@ -38,6 +38,17 @@ export const Devices: React.FC = () => {
     const [deviceUsageBytes, setDeviceUsageBytes] = useState<Record<string, number | null>>({});
     const [usageLoading, setUsageLoading] = useState(false);
 
+    // Thanh bar do theo thiet bi dung nhieu nhat trong danh sach, khong phai theo mot tran co dinh
+    // -- de so sanh tuong doi giua cac may van doc duoc du tong luu luong thang nay cao hay thap.
+    const maxUsageBytes = useMemo(() => {
+        const values = Object.values(deviceUsageBytes).filter((v): v is number => typeof v === 'number' && v > 0);
+        return values.length > 0 ? Math.max(...values) : 0;
+    }, [deviceUsageBytes]);
+    const usageBarPct = (value: number | null | undefined) => {
+        if (!value || maxUsageBytes <= 0) return 0;
+        return Math.max(2, Math.round((value / maxUsageBytes) * 100));
+    };
+
     // Wizard: bước 1 (tàu + thiết bị) -> bước 2 (cấu hình router) -> bước 3 (tokens + xuất cấu hình).
     const [wizardOpen, setWizardOpen] = useState(false);
     const [wizardStep, setWizardStep] = useState<WizardStep>(1);
@@ -50,10 +61,16 @@ export const Devices: React.FC = () => {
     const [deviceForm, setDeviceForm] = useState(emptyDeviceForm);
 
     const [configOptions, setConfigOptions] = useState<FleetConfigOptions>(DEFAULT_FLEET_CONFIG_OPTIONS);
+    // Dia chi server lay tu Settings, KHONG hard-code. Truoc day file sinh config ghi cung
+    // 10.149.79.186 -- dung may nhung sai network: router di qua ZeroTier va chi toi duoc
+    // 172.29.1.186, nen moi config sinh ra tu man hinh nay deu tro sai dich.
+    const [serverAddress, setServerAddress] = useState<string | null>(null);
 
     const [createdDevice, setCreatedDevice] = useState<Device>();
-    const [pushKey, setPushKey] = useState<string>();
-    const [radiusSecret, setRadiusSecret] = useState<{ credential_ref: string; secret: string }>();
+    const [pushKeyInput, setPushKeyInput] = useState('');
+    const [pushKeySaved, setPushKeySaved] = useState(false);
+    const [radiusSecretInput, setRadiusSecretInput] = useState('');
+    const [radiusSecretSaved, setRadiusSecretSaved] = useState(false);
     const [tokenBusy, setTokenBusy] = useState<'push' | 'radius' | ''>('');
     const [tokenError, setTokenError] = useState('');
     const [copyFeedback, setCopyFeedback] = useState('');
@@ -128,8 +145,10 @@ export const Devices: React.FC = () => {
         setDeviceForm(emptyDeviceForm);
         setConfigOptions(DEFAULT_FLEET_CONFIG_OPTIONS);
         setCreatedDevice(undefined);
-        setPushKey(undefined);
-        setRadiusSecret(undefined);
+        setPushKeyInput('');
+        setPushKeySaved(false);
+        setRadiusSecretInput('');
+        setRadiusSecretSaved(false);
         setTokenError('');
         setWizardOpen(true);
     };
@@ -192,9 +211,22 @@ export const Devices: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        void (async () => {
+            try {
+                const res = await SettingsService.getSettings();
+                setServerAddress(res.data?.radius_server_address ?? null);
+            } catch {
+                // Thieu quyen settings:read hoac DB down -- de null, bo sinh config se in placeholder
+                // thay vi am tham dan mot dia chi sai.
+                setServerAddress(null);
+            }
+        })();
+    }, []);
+
     const generatedConfig = useMemo(
-        () => buildFleetConfigFromOptions({ ...configOptions, radiusSecret: radiusSecret?.secret ?? '<RADIUS_SECRET>' }),
-        [configOptions, radiusSecret],
+        () => buildFleetConfigFromOptions({ ...configOptions, radiusSecret: radiusSecretInput || '<RADIUS_SECRET>', serverAddress }),
+        [configOptions, radiusSecretInput, serverAddress],
     );
 
     const copyText = async (text: string, label: string) => {
@@ -207,13 +239,13 @@ export const Devices: React.FC = () => {
         }
     };
 
-    const issuePushKey = async () => {
-        if (!createdDevice?.id) return;
+    const savePushKey = async () => {
+        if (!createdDevice?.id || pushKeyInput.length < 8) return;
         setTokenBusy('push');
         setTokenError('');
         try {
-            const res = await InventoryService.postDevicesPushKey({ deviceId: createdDevice.id });
-            setPushKey(res.data?.api_key);
+            await InventoryService.postDevicesPushKey({ deviceId: createdDevice.id, requestBody: { api_key: pushKeyInput } });
+            setPushKeySaved(true);
         } catch (err) {
             setTokenError(getApiErrorInfo(err).message);
         } finally {
@@ -221,13 +253,13 @@ export const Devices: React.FC = () => {
         }
     };
 
-    const issueRadiusSecret = async () => {
-        if (!createdDevice?.id) return;
+    const saveRadiusSecret = async () => {
+        if (!createdDevice?.id || radiusSecretInput.length < 4) return;
         setTokenBusy('radius');
         setTokenError('');
         try {
-            const res = await InventoryService.postDevicesRadiusSecret({ deviceId: createdDevice.id });
-            if (res.data?.credential_ref && res.data?.secret) setRadiusSecret({ credential_ref: res.data.credential_ref, secret: res.data.secret });
+            await InventoryService.postDevicesRadiusSecret({ deviceId: createdDevice.id, requestBody: { secret: radiusSecretInput } });
+            setRadiusSecretSaved(true);
         } catch (err) {
             setTokenError(getApiErrorInfo(err).message);
         } finally {
@@ -259,15 +291,15 @@ export const Devices: React.FC = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: '"Inter", sans-serif' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <div style={{ background: 'linear-gradient(135deg, #276f9c 0%, #17496d 100%)', borderRadius: '12px', padding: '20px', border: 'none', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 6px 18px -10px rgba(9, 38, 61, 0.55)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>TỔNG THIẾT BỊ</span>
-                        <Router size={18} color="#0ea5e9" />
+                        <span style={{ fontSize: '13px', color: '#fff', fontWeight: '600', letterSpacing: '0.04em' }}>TỔNG THIẾT BỊ</span>
+                        <Router size={18} color="#a9cfe6" />
                     </div>
-                    <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#0f172a' }}>{total}</span>
-                    <span style={{ fontSize: '12px', color: '#10b981' }}>+0 thiết bị mới</span>
+                    <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#fff' }}>{total}</span>
+                    <span style={{ fontSize: '12px', color: '#a9cfe6' }}>+0 thiết bị mới</span>
                 </div>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0', borderLeft: '3px solid #10b981', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>TRỰC TUYẾN (ONLINE)</span>
                         <CheckCircle2 size={18} color="#10b981" />
@@ -275,7 +307,7 @@ export const Devices: React.FC = () => {
                     <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#10b981' }}>{online}</span>
                     <span style={{ fontSize: '12px', color: '#64748b' }}>Đang hoạt động ổn định</span>
                 </div>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0', borderLeft: '3px solid #f59e0b', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>CẢNH BÁO (DEGRADED)</span>
                         <Activity size={18} color="#f59e0b" />
@@ -283,7 +315,7 @@ export const Devices: React.FC = () => {
                     <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#f59e0b' }}>{degraded}</span>
                     <span style={{ fontSize: '12px', color: '#64748b' }}>Cần kiểm tra lại</span>
                 </div>
-                <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                <div style={{ background: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0', borderLeft: '3px solid #ef4444', display: 'flex', flexDirection: 'column', gap: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '600' }}>MẤT KẾT NỐI (OFFLINE)</span>
                         <AlertCircle size={18} color="#ef4444" />
@@ -300,7 +332,7 @@ export const Devices: React.FC = () => {
                         <button onClick={() => void fetchDevices()} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'white', border: '1px solid #e2e8f0', color: '#334155', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'} onMouseOut={(e) => e.currentTarget.style.background = 'white'}>
                             <RefreshCw size={14} className={loading ? "spin" : ""} /> Tải lại danh sách
                         </button>
-                        <button onClick={openWizard} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#009688', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#00796b'} onMouseOut={(e) => e.currentTarget.style.background = '#009688'}>
+                        <button onClick={openWizard} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#146ca8', border: 'none', color: '#fff', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = '#0e4f7d'} onMouseOut={(e) => e.currentTarget.style.background = '#146ca8'}>
                             <span>+</span> Thêm thiết bị
                         </button>
                     </div>
@@ -308,7 +340,7 @@ export const Devices: React.FC = () => {
 
                 {loading ? (
                     <div style={{ padding: '80px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', color: '#64748b' }}>
-                        <RefreshCw size={32} className="spin" color="#009688" />
+                        <RefreshCw size={32} className="spin" color="#146ca8" />
                         <span>Đang tải dữ liệu thiết bị...</span>
                     </div>
                 ) : error ? (
@@ -321,8 +353,8 @@ export const Devices: React.FC = () => {
                             <thead>
                                 <tr style={{ background: '#f8fafc', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Tên thiết bị</th>
-                                    <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Vai trò (Role)</th>
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Trạng thái</th>
+                                    <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Lần truy cập gần nhất</th>
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Model</th>
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Năm sản xuất / OS</th>
                                     <th style={{ padding: '14px 20px', borderBottom: '1px solid #e2e8f0', fontWeight: '600' }}>Tổng dung lượng (30 ngày)</th>
@@ -335,13 +367,7 @@ export const Devices: React.FC = () => {
                                         <td style={{ padding: '16px 20px' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                 <span style={{ fontWeight: '600', color: '#0f172a' }}>{device.name || device.code || device.id}</span>
-                                                <span style={{ fontSize: '12px', color: '#64748b' }}>{device.code}</span>
                                             </div>
-                                        </td>
-                                        <td style={{ padding: '16px 20px' }}>
-                                            <span style={{ background: '#e2e8f0', color: '#334155', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>
-                                                {device.role || 'UNKNOWN'}
-                                            </span>
                                         </td>
                                         <td style={{ padding: '16px 20px' }}>
                                             {device.status === 'ONLINE' && <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: '500' }}><Circle size={10} fill="#10b981" color="#10b981" /> Online</span>}
@@ -349,6 +375,11 @@ export const Devices: React.FC = () => {
                                             {device.status === 'OFFLINE' && <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontWeight: '500' }}><Circle size={10} fill="#ef4444" color="#ef4444" /> Offline</span>}
                                             {device.status === 'MAINTENANCE' && <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontWeight: '500' }}><Circle size={10} fill="#64748b" color="#64748b" /> Bảo trì</span>}
                                             {(!device.status || device.status === 'UNKNOWN') && <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontWeight: '500' }}><Circle size={10} fill="#94a3b8" color="#94a3b8" /> Unknown</span>}
+                                        </td>
+                                        <td style={{ padding: '16px 20px' }} title={formatLastSeen(device.last_seen_at).title}>
+                                            <span style={{ color: formatLastSeen(device.last_seen_at).muted ? '#94a3b8' : '#475569' }}>
+                                                {formatLastSeen(device.last_seen_at).text}
+                                            </span>
                                         </td>
                                         <td style={{ padding: '16px 20px', color: '#475569' }}>
                                             {device.model || '-'}
@@ -362,7 +393,12 @@ export const Devices: React.FC = () => {
                                             ) : deviceUsageBytes[device.id] == null ? (
                                                 <span style={{ color: '#94a3b8' }}>Chưa có dữ liệu</span>
                                             ) : (
-                                                <strong style={{ color: '#0f172a' }}>{formatBytes(deviceUsageBytes[device.id]).value} {formatBytes(deviceUsageBytes[device.id]).unit}</strong>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '180px' }}>
+                                                    <div style={{ flex: 1, height: '8px', background: '#e8eef4', borderRadius: '4px', overflow: 'hidden' }}>
+                                                        <div style={{ width: usageBarPct(deviceUsageBytes[device.id]) + '%', height: '100%', background: '#146ca8', borderRadius: '4px' }} />
+                                                    </div>
+                                                    <strong style={{ color: '#0f172a', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', minWidth: '76px', textAlign: 'right' }}>{formatBytes(deviceUsageBytes[device.id]).value} {formatBytes(deviceUsageBytes[device.id]).unit}</strong>
+                                                </div>
                                             )}
                                         </td>
                                         <td style={{ padding: '16px 20px', textAlign: 'right' }}>
@@ -442,7 +478,7 @@ export const Devices: React.FC = () => {
                                 <label className="filter-control"><span>Model (tuỳ chọn)</span><input className="filter-select" value={deviceForm.model} onChange={e => setDeviceForm({ ...deviceForm, model: e.target.value })} placeholder="vd: RB5009UG+S+" /></label>
 
                                 {wizardError && <div style={{ color: '#ef4444', fontSize: '13px' }}>{wizardError}</div>}
-                                <button type="submit" style={{ background: '#009688', border: 'none', color: '#fff', padding: '10px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Tiếp tục</button>
+                                <button type="submit" style={{ background: '#146ca8', border: 'none', color: '#fff', padding: '10px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Tiếp tục</button>
                             </form>
                         )}
 
@@ -490,12 +526,17 @@ export const Devices: React.FC = () => {
                                     <span>ZeroTier (VPN quản trị)</span>
                                 </label>
 
-                                <p className="muted-text" style={{ fontSize: 12 }}>Địa chỉ server RADIUS/NetFlow/DNS log (10.149.79.186) và cổng UDP (1813/2055/5514) luôn cố định, không đổi được ở đây.</p>
+                                <p className="muted-text" style={{ fontSize: 12 }}>
+                                    Địa chỉ server RADIUS/NetFlow/DNS log: {serverAddress
+                                        ? <code>{serverAddress}</code>
+                                        : <span style={{ color: 'var(--warning)' }}>chưa đặt — vào Cài đặt → RADIUS điền trước, nếu không lệnh sinh ra sẽ còn chỗ trống</span>}
+                                    {' '}· cổng UDP 1813/2055/5514.
+                                </p>
 
                                 {wizardError && <div style={{ color: '#ef4444', fontSize: '13px' }}>{wizardError}</div>}
                                 <div style={{ display: 'flex', gap: 8 }}>
                                     <button type="button" className="button-secondary compact-button" onClick={() => setWizardStep(1)}>← Quay lại</button>
-                                    <button type="submit" disabled={wizardBusy} style={{ flex: 1, background: '#009688', border: 'none', color: '#fff', padding: '10px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
+                                    <button type="submit" disabled={wizardBusy} style={{ flex: 1, background: '#146ca8', border: 'none', color: '#fff', padding: '10px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>
                                         {wizardBusy ? 'Đang tạo…' : 'Tạo thiết bị & xuất cấu hình'}
                                     </button>
                                 </div>
@@ -504,31 +545,31 @@ export const Devices: React.FC = () => {
 
                         {wizardStep === 3 && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '20px', maxHeight: '75vh', overflowY: 'auto' }}>
-                                <p style={{ margin: 0 }}>Đã tạo thiết bị <strong>{createdDevice?.name}</strong>. Cấp token trước khi dán cấu hình xuống router (secret/key thật chỉ hiện đúng 1 lần).</p>
+                                <p style={{ margin: 0 }}>Đã tạo thiết bị <strong>{createdDevice?.name}</strong>. Đặt token trước khi dán cấu hình xuống router — bấm <Shuffle size={12} style={{ verticalAlign: -1 }} /> để tự sinh giá trị mạnh, hoặc tự gõ tay.</p>
 
-                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                    <button type="button" className="filter-apply" disabled={tokenBusy !== '' || !!pushKey} onClick={() => void issuePushKey()}>{tokenBusy === 'push' ? 'Đang tạo…' : pushKey ? 'Đã tạo Push API Key ✓' : 'Tạo Push API Key'}</button>
-                                    <button type="button" className="filter-apply" disabled={tokenBusy !== '' || !!radiusSecret} onClick={() => void issueRadiusSecret()}>{tokenBusy === 'radius' ? 'Đang tạo…' : radiusSecret ? 'Đã tạo RADIUS Secret ✓' : 'Tạo RADIUS Secret'}</button>
+                                <div className="settings-field" style={{ maxWidth: 320 }}>
+                                    <label>Push API key (tối thiểu 8 ký tự)</label>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <input className="filter-select" type="text" minLength={8} value={pushKeyInput} onChange={e => { setPushKeyInput(e.target.value); setPushKeySaved(false); }} placeholder="Tự đặt push API key" style={{ fontFamily: 'var(--font-mono)' }} />
+                                        <button type="button" className="button-secondary compact-button" title="Tự sinh giá trị ngẫu nhiên" onClick={() => { setPushKeyInput(generateRandomHex(32)); setPushKeySaved(false); }}><Shuffle size={14} /></button>
+                                        <button type="button" className="filter-apply" disabled={tokenBusy !== '' || pushKeyInput.length < 8} onClick={() => void savePushKey()}>{tokenBusy === 'push' ? 'Đang lưu…' : pushKeySaved ? 'Đã lưu ✓' : 'Lưu'}</button>
+                                    </div>
+                                </div>
+                                <div className="settings-field" style={{ maxWidth: 320 }}>
+                                    <label>RADIUS secret (tối thiểu 4 ký tự)</label>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <input className="filter-select" type="text" minLength={4} value={radiusSecretInput} onChange={e => { setRadiusSecretInput(e.target.value); setRadiusSecretSaved(false); }} placeholder="Tự đặt RADIUS secret" style={{ fontFamily: 'var(--font-mono)' }} />
+                                        <button type="button" className="button-secondary compact-button" title="Tự sinh giá trị ngẫu nhiên" onClick={() => { setRadiusSecretInput(generateRandomHex(24)); setRadiusSecretSaved(false); }}><Shuffle size={14} /></button>
+                                        <button type="button" className="filter-apply" disabled={tokenBusy !== '' || radiusSecretInput.length < 4} onClick={() => void saveRadiusSecret()}>{tokenBusy === 'radius' ? 'Đang lưu…' : radiusSecretSaved ? 'Đã lưu ✓' : 'Lưu'}</button>
+                                    </div>
                                 </div>
                                 {tokenError && <div style={{ color: '#ef4444', fontSize: '13px' }}>{tokenError}</div>}
 
-                                {pushKey && (
-                                    <SecretReveal heading="Push API Key — chỉ hiển thị 1 lần:" value={pushKey} copied={copyFeedback === 'push'} onCopy={() => void copyText(pushKey, 'push')} />
-                                )}
-                                {radiusSecret && (
-                                    <SecretReveal
-                                        heading={`RADIUS Secret — chỉ hiển thị 1 lần (${radiusSecret.credential_ref}):`}
-                                        value={radiusSecret.secret}
-                                        copied={copyFeedback === 'radius'}
-                                        onCopy={() => void copyText(radiusSecret.secret, 'radius')}
-                                    />
-                                )}
-
-                                <span className="muted-text" style={{ display: 'block' }}>Cấu hình router — dán vào Terminal (RouterOS mới toanh, chưa có gì để không đổi cấu hình cũ){radiusSecret ? ' — đã điền sẵn RADIUS secret thật ở trên' : ' — chưa cấp RADIUS Secret nên secret= còn để placeholder'}.</span>
+                                <span className="muted-text" style={{ display: 'block' }}>Cấu hình router — dán vào Terminal (RouterOS mới toanh, chưa có gì để không đổi cấu hình cũ){radiusSecretInput ? ' — đã điền sẵn RADIUS secret thật ở trên' : ' — chưa đặt RADIUS secret nên secret= còn để placeholder'}.</span>
                                 <textarea readOnly value={generatedConfig} rows={14} style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, padding: 10, borderRadius: 6, border: '1px solid #e2e8f0', background: '#0f172a', color: '#e2e8f0', resize: 'vertical' }} />
                                 <button type="button" className="button-secondary compact-button" onClick={() => void copyText(generatedConfig, 'config')}>{copyFeedback === 'config' ? 'Đã chép ✓' : 'Sao chép cấu hình'}</button>
 
-                                <button type="button" onClick={closeWizard} style={{ background: '#009688', border: 'none', color: '#fff', padding: '10px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Xong</button>
+                                <button type="button" onClick={closeWizard} style={{ background: '#146ca8', border: 'none', color: '#fff', padding: '10px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Xong</button>
                             </div>
                         )}
                     </div>

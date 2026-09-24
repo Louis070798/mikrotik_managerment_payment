@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { FreeradiusSyncModule } from '@freeradius-sync/freeradius-sync.module';
 import { SecretsModule } from '@secrets/secrets.module';
 import { InventoryCacheModule } from '@inventory-cache/inventory-cache.module';
 import { TelemetryModule } from '../telemetry/telemetry.module';
@@ -10,7 +11,7 @@ import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
 
 @Module({
-  imports: [TelemetryModule, SecretsModule, InventoryCacheModule],
+  imports: [FreeradiusSyncModule, TelemetryModule, SecretsModule, InventoryCacheModule],
   controllers: [AreasController, ShipsController, DevicesController],
   providers: [AreasService, ShipsService, DevicesService],
   exports: [AreasService, ShipsService, DevicesService],

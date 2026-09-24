@@ -93,9 +93,14 @@ export class DashboardService {
         total_areas: Number(totalAreas),
         total_ships: Number(totalShips),
         total_devices: Number(totalDevices),
+        // online/degraded dem theo ships.status -- gia tri THAT trong DB, nhung la trang thai do
+        // admin dat, khong phai do telemetry. Doc dung la "tau dang khai thac / dang bao tri".
         online_ships: statusCounts.active ?? 0,
         degraded_ships: statusCounts.maintenance ?? 0,
-        offline_ships: 0,
+        // null, KHONG phai 0. ship_status khong co gia tri OFFLINE (PLANNED/COMMISSIONING/ACTIVE/
+        // MAINTENANCE/DECOMMISSIONED), nen "tau mat ket noi" chi suy ra duoc tu devices.last_seen_at
+        // ma endpoint nay khong truy van. Tra 0 la bia ra mot phep do chua he thuc hien.
+        offline_ships: null,
         total_wan_throughput: null,
         active_crew_users: null,
         traffic: { wan_download_bytes: null, wan_upload_bytes: null, crew_bytes: null, business_bytes: null },
@@ -182,7 +187,10 @@ export class DashboardService {
         },
         business: { download_bytes: null, upload_bytes: null, active_devices: null, identified_pct: null },
         reconciliation_summary: { status: 'UNAVAILABLE', crew_gap_pct: null, wan_gap_pct: null, data_quality_score: null, top_gap_reason: null },
-        alerts: { critical: 0, major: 0, warning: 0 },
+        // null, KHONG phai {0,0,0}. Khong co truy van nao dem alert cua tau nay -- ba so 0 truoc day
+        // doc thanh "da kiem tra, khong co canh bao nao", trong khi thuc te la chua dem bao gio.
+        // Bang alerts luu pham vi trong cot scope (jsonb) nen dem theo ship can truy van rieng.
+        alerts: null,
         status: ship.status,
         wan_rx: null,
         wan_tx: null,

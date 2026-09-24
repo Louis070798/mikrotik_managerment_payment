@@ -6,6 +6,10 @@ module.exports = {
   transform: { '^.+\\.(t|j)s$': 'ts-jest' },
   testEnvironment: 'node',
   moduleNameMapper: {
+    '^@db-aaa/(.*)$': '<rootDir>/src/libs/db-aaa/$1',
+    '^@freeradius-sync/(.*)$': '<rootDir>/src/libs/freeradius-sync/$1',
+    '^@debug-log/(.*)$': '<rootDir>/src/libs/debug-log/$1',
+    '^@ingest-throttle/(.*)$': '<rootDir>/src/libs/ingest-throttle/$1',
     '^@common/(.*)$': '<rootDir>/src/libs/common/$1',
     '^@config/(.*)$': '<rootDir>/src/libs/config/$1',
     '^@db/(.*)$': '<rootDir>/src/libs/db-control/$1',

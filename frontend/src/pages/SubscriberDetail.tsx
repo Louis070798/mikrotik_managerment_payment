@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Banknote, CalendarClock, Database, Gauge, Smartphone } from 'lucide-react';
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AuditService, CrewService, InventoryService, PackagesService, SubscribersService, TenantsService } from '../api';
 import type { Subscriber } from '../api/models/Subscriber';
@@ -15,7 +16,7 @@ import { formatBytes, formatCount, formatVnd, getApiErrorInfo, isRecord } from '
 
 type DetailTab = 'Tổng quan' | 'Gói cước' | 'Sử dụng' | 'Phiên đăng nhập' | 'Lịch sử hoạt động';
 const detailTabs: DetailTab[] = ['Tổng quan', 'Gói cước', 'Sử dụng', 'Phiên đăng nhập', 'Lịch sử hoạt động'];
-const SERVICE_COLORS = ['#009688', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899', '#84cc16'];
+const SERVICE_COLORS = ['#146ca8', '#00a0a6', '#d97706', '#be123c', '#7c3aed', '#4d7c0f', '#db2777', '#0284c7'];
 
 // Dich ngan cac ma action that tu audit_logs (xem *.service.ts .audit.record({action: '...'}))
 // sang mo ta tieng Viet cho nguoi van hanh doc -- KHONG sinh mo ta gia, chi dich 1-1 tu ma da co.
@@ -500,7 +501,7 @@ export const SubscriberDetail: React.FC = () => {
                                                     <XAxis dataKey="date" fontSize={11} />
                                                     <YAxis fontSize={11} unit=" MB" width={56} />
                                                     <Tooltip formatter={(v) => `${Number(v).toFixed(1)} MB`} />
-                                                    <Bar dataKey="total_mb" name="Data/ngày" fill="#009688" radius={[4, 4, 0, 0]} />
+                                                    <Bar dataKey="total_mb" name="Data/ngày" fill="#146ca8" radius={[4, 4, 0, 0]} />
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -529,7 +530,7 @@ export const SubscriberDetail: React.FC = () => {
                                                     <XAxis dataKey="date" fontSize={11} />
                                                     <YAxis fontSize={11} unit=" Mbps" width={56} />
                                                     <Tooltip formatter={(v) => `${Number(v).toFixed(2)} Mbps`} />
-                                                    <Line type="monotone" dataKey="avg_mbps" name="Tốc độ TB" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+                                                    <Line type="monotone" dataKey="avg_mbps" name="Tốc độ TB" stroke="#00a0a6" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
                                                 </LineChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -549,11 +550,11 @@ export const SubscriberDetail: React.FC = () => {
                         pkg ? (
                             <>
                                 <div className="mini-stat-row" style={{ marginTop: 16 }}>
-                                    <MiniStat label="Tốc độ" value={`↓${pkg.down_mbps ?? '?'}/↑${pkg.up_mbps ?? '?'}`} unit="Mbps" status="healthy" />
-                                    <MiniStat label="Quota" value={pkg.quota_gb ?? '?'} unit="GB/chu kỳ" status="healthy" />
-                                    <MiniStat label="Thời hạn" value={pkg.duration_value ?? '?'} unit={pkg.duration_unit === 'DAY' ? 'ngày' : 'tháng'} status="healthy" />
-                                    <MiniStat label="Giá gói" value={formatVnd(pkg.price_vnd)} status="healthy" />
-                                    <MiniStat label="Thiết bị đồng thời" value={pkg.max_concurrent_devices ?? 1} unit="tối đa" status="healthy" />
+                                    <MiniStat icon={<Gauge size={12} />} label="Tốc độ" value={`↓${pkg.down_mbps ?? '?'}/↑${pkg.up_mbps ?? '?'}`} unit="Mbps" status="healthy" />
+                                    <MiniStat icon={<Database size={12} />} label="Quota" value={pkg.quota_gb ?? '?'} unit="GB/chu kỳ" status="healthy" />
+                                    <MiniStat icon={<CalendarClock size={12} />} label="Thời hạn" value={pkg.duration_value ?? '?'} unit={pkg.duration_unit === 'DAY' ? 'ngày' : 'tháng'} status="healthy" />
+                                    <MiniStat icon={<Banknote size={12} />} label="Giá gói" value={formatVnd(pkg.price_vnd)} status="healthy" />
+                                    <MiniStat icon={<Smartphone size={12} />} label="Thiết bị đồng thời" value={pkg.max_concurrent_devices ?? 1} unit="tối đa" status="healthy" />
                                 </div>
 
                                 <section className="glass-panel dashboard-section">
@@ -566,8 +567,8 @@ export const SubscriberDetail: React.FC = () => {
                                                 <YAxis type="category" dataKey="name" fontSize={12} width={80} />
                                                 <Tooltip formatter={(v) => `${Number(v)} Mbps`} />
                                                 <Bar dataKey="mbps" radius={[0, 6, 6, 0]}>
-                                                    <Cell fill="#009688" />
-                                                    <Cell fill="#3b82f6" />
+                                                    <Cell fill="#146ca8" />
+                                                    <Cell fill="#00a0a6" />
                                                 </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
@@ -616,12 +617,12 @@ export const SubscriberDetail: React.FC = () => {
                                                     <AreaChart data={sessionChartData}>
                                                         <defs>
                                                             <linearGradient id="subDownloadGrad" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#009688" stopOpacity={0.35} />
-                                                                <stop offset="95%" stopColor="#009688" stopOpacity={0} />
+                                                                <stop offset="5%" stopColor="#146ca8" stopOpacity={0.35} />
+                                                                <stop offset="95%" stopColor="#146ca8" stopOpacity={0} />
                                                             </linearGradient>
                                                             <linearGradient id="subUploadGrad" x1="0" y1="0" x2="0" y2="1">
-                                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.35} />
-                                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                                                                <stop offset="5%" stopColor="#00a0a6" stopOpacity={0.35} />
+                                                                <stop offset="95%" stopColor="#00a0a6" stopOpacity={0} />
                                                             </linearGradient>
                                                         </defs>
                                                         <CartesianGrid strokeDasharray="3 3" />
@@ -629,8 +630,8 @@ export const SubscriberDetail: React.FC = () => {
                                                         <YAxis fontSize={11} unit=" MB" />
                                                         <Tooltip formatter={(v) => `${Number(v).toFixed(1)} MB`} />
                                                         <Legend />
-                                                        <Area type="monotone" dataKey="download_mb" name="Download" stroke="#009688" fill="url(#subDownloadGrad)" />
-                                                        <Area type="monotone" dataKey="upload_mb" name="Upload" stroke="#3b82f6" fill="url(#subUploadGrad)" />
+                                                        <Area type="monotone" dataKey="download_mb" name="Download" stroke="#146ca8" fill="url(#subDownloadGrad)" />
+                                                        <Area type="monotone" dataKey="upload_mb" name="Upload" stroke="#00a0a6" fill="url(#subUploadGrad)" />
                                                     </AreaChart>
                                                 </ResponsiveContainer>
                                             </div>

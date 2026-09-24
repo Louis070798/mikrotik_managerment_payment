@@ -8,6 +8,7 @@ import { DB_TOKEN, DbClient } from '@db/db.module';
 import { subscribers, packages } from '@db/schema';
 import { compactPayload } from '@collectors/collector.types';
 import { InventoryCacheService } from '@inventory-cache/inventory-cache.service';
+import { IngestConcurrencyLimiterService } from '@ingest-throttle/ingest-concurrency-limiter.service';
 import { verifyPassword } from '@password-hash/password-hash';
 import { EnvCredentialResolver } from '../health-checks/credential-resolver';
 import { TelemetryService } from '../../modules/telemetry/telemetry.service';
@@ -47,9 +48,18 @@ export class RadiusServerService implements OnModuleInit, OnModuleDestroy {
     @Inject(DB_TOKEN) private readonly db: DbClient,
     private readonly telemetry: TelemetryService,
     private readonly inventoryCache: InventoryCacheService,
+    private readonly ingestLimiter: IngestConcurrencyLimiterService,
   ) {}
 
   onModuleInit() {
+    // RADIUS_MODE=freeradius: FreeRADIUS la ben xac thuc + ghi accounting that, backend chi doc
+    // lai qua FreeradiusSyncService. KHONG bind socket o che do nay -- neu backend chay cung may
+    // voi FreeRADIUS thi bind se that bai voi EADDRINUSE, ma loi do chi duoc LOG roi bo qua
+    // (xem socket.on('error')), nen he thong se im lang chay voi RADIUS chet. Tot hon la khong mo.
+    if (process.env.RADIUS_MODE === 'freeradius') {
+      this.logger.log('RADIUS_MODE=freeradius — bỏ qua RADIUS server nội bộ, phiên lấy từ FreeRADIUS qua FreeradiusSyncService.');
+      return;
+    }
     this.acctSocket = this.bindSocket(this.env.RADIUS_ACCT_PORT, 'accounting');
     this.authSocket = this.bindSocket(this.env.RADIUS_AUTH_PORT, 'access (PAP)');
   }
@@ -57,7 +67,9 @@ export class RadiusServerService implements OnModuleInit, OnModuleDestroy {
   private bindSocket(port: number, label: string): dgram.Socket {
     const socket = dgram.createSocket('udp4');
     socket.on('message', (msg, rinfo) => {
-      this.handlePacket(msg, rinfo, socket).catch((err) => this.logger.error(`Unhandled error processing RADIUS packet from ${rinfo.address}: ${(err as Error).message}`));
+      // Qua limiter dung chung voi NetFlow (xem ingest-throttle) -- khong ghim thang connection pool
+      // khi ca 2 tau cung burst RADIUS/NetFlow lien tuc.
+      this.ingestLimiter.run(() => this.handlePacket(msg, rinfo, socket)).catch((err) => this.logger.error(`Unhandled error processing RADIUS packet from ${rinfo.address}: ${(err as Error).message}`));
     });
     socket.on('error', (err) => this.logger.error(`RADIUS UDP socket error (${label}, :${port}): ${err.message}`));
     socket.bind(port, () => {
@@ -132,9 +144,19 @@ export class RadiusServerService implements OnModuleInit, OnModuleDestroy {
     const terminateCause = attrUint32(decoded.attributes, RADIUS_ATTR.ACCT_TERMINATE_CAUSE);
 
     const observedAt = new Date();
-    // 1 gói Accounting thật cho đúng 1 (session, status, giây quan sát) — khớp unique index
-    // (source, idempotency_key) của raw_telemetry_events, chống ghi trùng khi NAS retry.
-    const idempotencyKey = `radius:${sessionId}:${statusType}:${Math.floor(observedAt.getTime() / 1000)}`;
+    // Khoá chống trùng KHÔNG được chứa thời điểm nhận gói.
+    //
+    // Bản cũ nhét `Math.floor(observedAt/1000)` vào khoá. NAS retransmit Accounting-Stop mỗi ~3
+    // giây cho tới khi được ACK (hành vi chuẩn RFC 2866), nên mỗi lần gửi lại rơi vào một giây
+    // khác → khoá khác → lọt qua unique index (source, idempotency_key) và ghi thêm một sự kiện
+    // thô trùng lặp. Chú thích cũ nói cơ chế này "chống ghi trùng khi NAS retry" — nó làm đúng
+    // điều ngược lại.
+    //
+    // START và STOP mỗi phiên chỉ có đúng một lần, nên (session, status) là đủ để nhận diện.
+    // INTERIM thì lặp lại nhiều lần một cách hợp lệ, phân biệt bằng Acct-Session-Time: mỗi lần
+    // cập nhật thật mang một giá trị khác, còn gói gửi lại mang đúng giá trị cũ.
+    const idempotencySuffix = statusType === 'INTERIM_UPDATE' ? `:${sessionTime ?? 'na'}` : '';
+    const idempotencyKey = `radius:${sessionId}:${statusType}${idempotencySuffix}`;
 
     try {
       await this.telemetry.ingest({

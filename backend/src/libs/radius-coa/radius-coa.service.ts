@@ -5,8 +5,15 @@ import { RADIUS_ATTR, RADIUS_CODE } from '@radius-server/radius-attributes';
 import { buildZeroOctetAuthenticator, encodeAttr } from '@radius-server/radius-packet';
 
 /** Cổng CoA/Disconnect mặc định RouterOS lắng nghe (RFC 5176 §3.1) — không cấu hình được theo
- * từng thiết bị trong phase này (devices không có cột coa_port riêng). */
+ * từng thiết bị trong phase này (devices không có cột coa_port riêng), nhưng đổi được cho CẢ hệ
+ * thống qua RADIUS_COA_PORT (Settings). Đọc lại mỗi lần gửi thay vì cache lúc import: Settings ghi
+ * thẳng vào process.env nên gói Disconnect kế tiếp dùng ngay giá trị mới, không cần restart. */
 const DEFAULT_COA_PORT = 3799;
+
+function coaPort(): number {
+  const raw = Number(process.env.RADIUS_COA_PORT);
+  return Number.isInteger(raw) && raw > 0 && raw <= 65535 ? raw : DEFAULT_COA_PORT;
+}
 
 export type DisconnectResult =
   | { outcome: 'ACK' }
@@ -82,7 +89,7 @@ export class RadiusCoaService {
         }
       });
 
-      socket.send(packet, DEFAULT_COA_PORT, nasHost, (err) => {
+      socket.send(packet, coaPort(), nasHost, (err) => {
         if (err) finish({ outcome: 'ERROR', message: err.message });
       });
     });

@@ -47,6 +47,7 @@ export { DeviceCreateRequest } from './models/DeviceCreateRequest';
 export { DeviceInterfaceTraffic } from './models/DeviceInterfaceTraffic';
 export type { DevicePushKey } from './models/DevicePushKey';
 export type { DeviceRadiusSecret } from './models/DeviceRadiusSecret';
+export { DeviceRadiusSecretValue } from './models/DeviceRadiusSecretValue';
 export type { DeviceTelemetryPushRequest } from './models/DeviceTelemetryPushRequest';
 export type { DeviceTelemetryPushResult } from './models/DeviceTelemetryPushResult';
 export { DeviceTraffic } from './models/DeviceTraffic';

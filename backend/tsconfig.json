@@ -22,6 +22,8 @@
       "@common/*": ["src/libs/common/*"],
       "@config/*": ["src/libs/config/*"],
       "@db/*": ["src/libs/db-control/*"],
+      "@db-aaa/*": ["src/libs/db-aaa/*"],
+      "@freeradius-sync/*": ["src/libs/freeradius-sync/*"],
       "@registry/*": ["src/libs/registry/*"],
       "@health-checks/*": ["src/libs/health-checks/*"],
       "@audit/*": ["src/libs/audit/*"],
@@ -37,7 +39,8 @@
       "@inventory-cache/*": ["src/libs/inventory-cache/*"],
       "@password-hash/*": ["src/libs/password-hash/*"],
       "@radius-coa/*": ["src/libs/radius-coa/*"],
-      "@debug-log/*": ["src/libs/debug-log/*"]
+      "@debug-log/*": ["src/libs/debug-log/*"],
+      "@ingest-throttle/*": ["src/libs/ingest-throttle/*"]
     }
   },
   "include": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"]

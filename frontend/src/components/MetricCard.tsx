@@ -37,7 +37,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             </div>
 
             <span className={`stat-value ${value === null || value === undefined ? 'stat-value-unavailable' : ''}`} style={{ margin: '0.5rem 0' }}>
-                {value === null || value === undefined ? 'Not available' : value}{value !== null && value !== undefined && unit ? <span style={{ fontSize: '1rem', color: 'var(--text-muted)', marginLeft: '0.35rem' }}>{unit}</span> : null}
+                {value === null || value === undefined ? 'Chưa có dữ liệu' : value}{value !== null && value !== undefined && unit ? <span style={{ fontSize: '1rem', color: 'var(--text-muted)', marginLeft: '0.35rem' }}>{unit}</span> : null}
             </span>
 
             {description && <p className="metric-description">{description}</p>}

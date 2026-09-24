@@ -3,30 +3,34 @@ import { Link, useParams } from 'react-router-dom';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import {
     Activity, ArrowDown, ArrowUp, Cable, CircleCheck, CircleHelp, CirclePause, CircleX, Database,
-    EthernetPort, Gauge, Network, Plug, Server, TriangleAlert, User, UserCheck, Users, Wifi,
+    Check, Clock, Copy, Cpu, EthernetPort, Eye, EyeOff, Gauge, Network, Plug, Server, Shuffle, Terminal, TriangleAlert, User, UserCheck, Users, Wifi,
 } from 'lucide-react';
-import { InterfacesService, InventoryService, PackagesService, SubscribersService } from '../api';
+import { CrewService, InterfacesService, InventoryService, PackagesService, SettingsService, SubscribersService } from '../api';
 import type { Device } from '../api/models/Device';
 import type { Interface as ShipInterface } from '../api/models/Interface';
 import type { DeviceTraffic } from '../api/models/DeviceTraffic';
 import type { DeviceInterfaceTraffic } from '../api/models/DeviceInterfaceTraffic';
+import type { CrewUser } from '../api/models/CrewUser';
 import type { Subscriber } from '../api/models/Subscriber';
 import type { Package } from '../api/models/Package';
+import type { SettingsResponse } from '../api/models/SettingsResponse';
 import { DataStateNotice } from '../components/DataStateNotice';
 import { MetricCard } from '../components/MetricCard';
 import { MiniStat } from '../components/MiniStat';
-import { SecretReveal } from '../components/SecretReveal';
 import { VolumeSpeedChart } from '../components/VolumeSpeedChart';
-import { bytesToRateBps, combineBytes, combineGapBytes, formatBytes, formatPercent, formatRate, getApiErrorInfo, type DashboardGranularity } from '../lib/dashboard';
+import { bytesToRateBps, combineBytes, formatBytes, formatLastSeen, formatRate, getApiErrorInfo, type DashboardGranularity } from '../lib/dashboard';
+import { generateRandomHex } from '../lib/randomToken';
+import { buildRouterOsFullConfig, routerOsFullConfigBlockers } from '../lib/routerosFleetCommands';
 
-type TrafficRange = '5m' | '1d' | '3d' | '7d';
+type TrafficRange = '5m' | '1d' | '3d' | '7d' | '30d';
 type Tab = 'Traffic' | 'Interface' | 'Người dùng' | 'Kết nối trực tiếp';
 
 const RANGE_OPTIONS: { key: TrafficRange; label: string; ms: number; granularity: DashboardGranularity }[] = [
     { key: '5m', label: '5 phút', ms: 5 * 60 * 1000, granularity: '1m' },
     { key: '1d', label: '1 ngày', ms: 24 * 60 * 60 * 1000, granularity: '5m' },
     { key: '3d', label: '3 ngày', ms: 3 * 24 * 60 * 60 * 1000, granularity: '1h' },
-    { key: '7d', label: '7 ngày', ms: 7 * 24 * 60 * 60 * 1000, granularity: '1h' },
+    { key: '7d', label: '7 ngày', ms: 7 * 24 * 60 * 60 * 1000, granularity: '1d' },
+    { key: '30d', label: '30 ngày', ms: 30 * 24 * 60 * 60 * 1000, granularity: '1d' },
 ];
 const tabs: Tab[] = ['Traffic', 'Interface', 'Người dùng', 'Kết nối trực tiếp'];
 
@@ -36,73 +40,6 @@ const tabs: Tab[] = ['Traffic', 'Interface', 'Người dùng', 'Kết nối tr�
  * interface, tự ghép JSON (RouterOS không có serializer sẵn) rồi POST bằng /tool fetch mỗi 5 phút.
  * Server không bao giờ chủ động kết nối ngược vào router.
  */
-function buildRouterOsScript(deviceId: string, apiKey: string, serverUrl: string): string {
-    const pushUrl = `${serverUrl.replace(/\/+$/, '')}/devices/${deviceId}/telemetry-push`;
-    const lines = [
-        `# === Fleet push telemetry — device_id=${deviceId} ===`,
-        '# Dan toan bo script nay vao System > Scheduler > (+) > On Event, dat Interval = 00:05:00.',
-        '# Router tu chay moi 5 phut va tu gui counter len server (push 1 chieu) — server KHONG bao gio ket noi nguoc vao router.',
-        `:local serverUrl "${pushUrl}"`,
-        `:local apiKey "${apiKey}"`,
-        ':local ident [/system identity get name]',
-        '',
-        ':local json ("{\\"identity\\":\\"" . $ident . "\\",\\"interfaces\\":[")',
-        ':local first true',
-        ':foreach i in=[/interface find where disabled=no] do={',
-        '    :local ifName [/interface get $i name]',
-        '    :local rx [/interface get $i rx-byte]',
-        '    :local tx [/interface get $i tx-byte]',
-        '    :if ($first = false) do={ :set json ($json . ",") }',
-        '    :set json ($json . "{\\"name\\":\\"" . $ifName . "\\",\\"rx_byte\\":" . $rx . ",\\"tx_byte\\":" . $tx . "}")',
-        '    :set first false',
-        '}',
-        ':set json ($json . "]}")',
-        '',
-        '/tool fetch url=$serverUrl http-method=post output=none \\',
-        '    http-header-field="Content-Type: application/json,X-Device-Api-Key: $apiKey" \\',
-        '    http-data=$json',
-    ];
-    return lines.join('\n');
-}
-
-/**
- * Lấy phần host thuần (không protocol, không path, không cổng) từ Server URL đã có sẵn ở tab này
- * (người dùng đã tự điền cho script push telemetry) — tái dùng đúng địa chỉ đó cho NetFlow/DNS log
- * thay vì bắt điền lại hoặc để placeholder <SERVER_IP> mơ hồ, vì đây chính là địa chỉ router đã
- * chứng minh tới được.
- */
-function extractHost(serverUrl: string): string {
-    try {
-        return new URL(serverUrl).hostname;
-    } catch {
-        return serverUrl.replace(/^https?:\/\//, '').split(/[/:]/)[0] || '<SERVER_IP>';
-    }
-}
-
-/**
- * Cấu hình NetFlow v9 + DNS log thật (RFC 3954 / RouterOS `/system logging topics=dns`) — CHỈ
- * THÊM vào router, không đổi bất kỳ dòng cấu hình nào khác (đúng yêu cầu người dùng cho Hai Nam
- * 81). Dán trực tiếp vào Terminal, không phải Scheduler (đây là cấu hình router thường trực, không
- * phải script chạy định kỳ). Server lắng nghe UDP 2055 (NetFlow) và UDP 5514 (DNS log) — xem
- * backend/src/libs/netflow-collector, dns-log-collector.
- */
-function buildNetflowDnsScript(host: string): string {
-    return [
-        '# === NetFlow v9 + DNS log — phan tich WAN dung bao nhieu cho dich vu nao (YouTube/TikTok/...) ===',
-        '# Dan vao Terminal (khong phai Scheduler) -- day la cau hinh thuong truc, chi THEM, khong doi gi khac.',
-        '/ip traffic-flow',
-        'set active-flow-timeout=1m cache-entries=32k enabled=yes inactive-flow-timeout=2m interfaces=CREW,BUSINESS',
-        '/ip traffic-flow target',
-        `add dst-address=${host} port=2055 version=9`,
-        '/system logging action',
-        // Ten action RouterOS chi cho phep chu+so (khong dau gach ngang) -- "remote-dns" bi tu choi
-        // that ("action name can contain only letters and numbers"), dung "remotedns".
-        `add name=remotedns remote=${host} remote-port=5514 target=remote`,
-        '/system logging',
-        'add action=remotedns topics=dns',
-    ].join('\n');
-}
-
 function statusOf(state?: string): 'healthy' | 'warning' | 'critical' | 'unknown' {
     if (state === 'ONLINE' || state === 'UP') return 'healthy';
     if (state === 'DEGRADED') return 'warning';
@@ -152,6 +89,12 @@ export const DeviceDetail: React.FC = () => {
     const [trafficLoading, setTrafficLoading] = useState(true);
     const [trafficError, setTrafficError] = useState('');
 
+    // User hotspot lay tu RADIUS (endpoint CREW chi co o cap TAU) roi giao voi danh sach subscriber
+    // co nas_device_id = thiet bi nay -- de bang chi con user thuc su quay so qua router nay.
+    const [crewUsers, setCrewUsers] = useState<CrewUser[]>([]);
+    const [crewLoading, setCrewLoading] = useState(true);
+    const [crewError, setCrewError] = useState('');
+
     const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
     const [packages, setPackages] = useState<Package[]>([]);
     const [usersLoading, setUsersLoading] = useState(true);
@@ -168,12 +111,21 @@ export const DeviceDetail: React.FC = () => {
     const [ipSaving, setIpSaving] = useState(false);
     const [ipSaveError, setIpSaveError] = useState('');
     const [ipSavedAt, setIpSavedAt] = useState<number>();
-    const [issuedKey, setIssuedKey] = useState<string>();
+    const [newPushKeyInput, setNewPushKeyInput] = useState('');
     const [keyBusy, setKeyBusy] = useState(false);
     const [keyError, setKeyError] = useState('');
-    const [issuedRadiusSecret, setIssuedRadiusSecret] = useState<string>();
+    const [keySaved, setKeySaved] = useState(false);
+    const [newRadiusSecretInput, setNewRadiusSecretInput] = useState('');
     const [radiusSecretBusy, setRadiusSecretBusy] = useState(false);
     const [radiusSecretError, setRadiusSecretError] = useState('');
+    const [radiusSecretSaved, setRadiusSecretSaved] = useState(false);
+    // Secret that CHI duoc tai khi admin bam "Hien" -- moi lan tai deu ghi audit
+    // device.radius_secret_reveal, nen khong prefetch san luc mo trang.
+    const [revealedSecret, setRevealedSecret] = useState<string>();
+    const [revealBusy, setRevealBusy] = useState(false);
+    const [revealError, setRevealError] = useState('');
+    // Dia chi/cong server RADIUS (Settings) -- can de sinh lenh "/radius add address=..." dung.
+    const [radiusSettings, setRadiusSettings] = useState<SettingsResponse['data']>();
     const [copyFeedback, setCopyFeedback] = useState<string>();
     const [serverUrl, setServerUrl] = useState(() => {
         const { protocol, hostname, port } = window.location;
@@ -223,13 +175,16 @@ export const DeviceDetail: React.FC = () => {
         }
     }, [deviceId, ipInput]);
 
-    const issueKey = useCallback(async () => {
-        if (!deviceId) return;
+    const setPushKey = useCallback(async () => {
+        if (!deviceId || newPushKeyInput.length < 8) return;
         setKeyBusy(true);
         setKeyError('');
         try {
-            const res = await InventoryService.postDevicesPushKey({ deviceId });
-            setIssuedKey(res.data?.api_key);
+            await InventoryService.postDevicesPushKey({ deviceId, requestBody: { api_key: newPushKeyInput } });
+            // KHONG xoa o nhap sau khi luu (khac Subscriber/Tenant) -- gia tri nay con can hien trong
+            // script RouterOS ben duoi de admin copy nguyen ca script dan vao router.
+            setKeySaved(true);
+            setTimeout(() => setKeySaved(false), 2500);
             const fresh = await InventoryService.getDevices1({ deviceId });
             setDevice(fresh.data);
         } catch (requestError) {
@@ -237,7 +192,7 @@ export const DeviceDetail: React.FC = () => {
         } finally {
             setKeyBusy(false);
         }
-    }, [deviceId]);
+    }, [deviceId, newPushKeyInput]);
 
     const revokeKey = useCallback(async () => {
         if (!deviceId) return;
@@ -245,7 +200,6 @@ export const DeviceDetail: React.FC = () => {
         setKeyError('');
         try {
             await InventoryService.deleteDevicesPushKey({ deviceId });
-            setIssuedKey(undefined);
             const fresh = await InventoryService.getDevices1({ deviceId });
             setDevice(fresh.data);
         } catch (requestError) {
@@ -255,13 +209,34 @@ export const DeviceDetail: React.FC = () => {
         }
     }, [deviceId]);
 
-    const issueRadiusSecret = useCallback(async () => {
+    const setRadiusSecretValue = useCallback(async () => {
+        if (!deviceId || newRadiusSecretInput.length < 4) return;
+        setRadiusSecretBusy(true);
+        setRadiusSecretError('');
+        try {
+            await InventoryService.postDevicesRadiusSecret({ deviceId, requestBody: { secret: newRadiusSecretInput } });
+            // KHONG xoa o nhap sau khi luu -- admin can go dung gia tri nay vao "/radius add secret=..."
+            // tren router, xoa ngay se mat dau vet vua go gi.
+            // Hien gia tri MOI luon, de khoi lenh RouterOS ben duoi khong con dan secret cu.
+            setRevealedSecret(newRadiusSecretInput);
+            setRadiusSecretSaved(true);
+            setTimeout(() => setRadiusSecretSaved(false), 2500);
+            const fresh = await InventoryService.getDevices1({ deviceId });
+            setDevice(fresh.data);
+        } catch (requestError) {
+            setRadiusSecretError(getApiErrorInfo(requestError).message);
+        } finally {
+            setRadiusSecretBusy(false);
+        }
+    }, [deviceId, newRadiusSecretInput]);
+
+    const revokeRadiusSecret = useCallback(async () => {
         if (!deviceId) return;
         setRadiusSecretBusy(true);
         setRadiusSecretError('');
         try {
-            const res = await InventoryService.postDevicesRadiusSecret({ deviceId });
-            setIssuedRadiusSecret(res.data?.secret);
+            await InventoryService.deleteDevicesRadiusSecret({ deviceId });
+            setRevealedSecret(undefined);
             const fresh = await InventoryService.getDevices1({ deviceId });
             setDevice(fresh.data);
         } catch (requestError) {
@@ -271,19 +246,17 @@ export const DeviceDetail: React.FC = () => {
         }
     }, [deviceId]);
 
-    const revokeRadiusSecret = useCallback(async () => {
+    const revealRadiusSecret = useCallback(async () => {
         if (!deviceId) return;
-        setRadiusSecretBusy(true);
-        setRadiusSecretError('');
+        setRevealBusy(true);
+        setRevealError('');
         try {
-            await InventoryService.deleteDevicesRadiusSecret({ deviceId });
-            setIssuedRadiusSecret(undefined);
-            const fresh = await InventoryService.getDevices1({ deviceId });
-            setDevice(fresh.data);
+            const res = await InventoryService.getDevicesRadiusSecret({ deviceId });
+            setRevealedSecret(res.data?.secret);
         } catch (requestError) {
-            setRadiusSecretError(getApiErrorInfo(requestError).message);
+            setRevealError(getApiErrorInfo(requestError).message);
         } finally {
-            setRadiusSecretBusy(false);
+            setRevealBusy(false);
         }
     }, [deviceId]);
 
@@ -320,6 +293,38 @@ export const DeviceDetail: React.FC = () => {
     }, [deviceId, range]);
 
     useEffect(() => { if (activeTab === 'Traffic') void fetchTraffic(); }, [activeTab, fetchTraffic]);
+
+    const fetchCrew = useCallback(async () => {
+        if (!deviceId) return;
+        const shipId = device?.ship_id;
+        if (!shipId) { setCrewUsers([]); setCrewLoading(false); return; }
+        setCrewLoading(true);
+        setCrewError('');
+        try {
+            const to = new Date();
+            const from = new Date(to.getTime() - rangeOption.ms);
+            const [crewRes, subRes] = await Promise.all([
+                CrewService.getShipsCrewUsers({
+                    shipId,
+                    from: from.toISOString(),
+                    to: to.toISOString(),
+                    granularity: rangeOption.granularity,
+                }),
+                SubscribersService.getSubscribers({ nasDeviceId: deviceId }),
+            ]);
+            const deviceUsernames = new Set((subRes.data ?? []).map(sub => sub.username).filter((u): u is string => !!u));
+            const all = crewRes.data?.users ?? [];
+            // Chi giu user RADIUS cua tau co subscriber tro NAS ve dung thiet bi nay.
+            setCrewUsers(all.filter(user => user.username && deviceUsernames.has(user.username)));
+        } catch (requestError) {
+            setCrewError(getApiErrorInfo(requestError).message);
+        } finally {
+            setCrewLoading(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [deviceId, device?.ship_id, range]);
+
+    useEffect(() => { if (activeTab === 'Traffic') void fetchCrew(); }, [activeTab, fetchCrew]);
 
     const fetchInterfaceTraffic = useCallback(async () => {
         if (!deviceId) return;
@@ -365,6 +370,19 @@ export const DeviceDetail: React.FC = () => {
 
     useEffect(() => { if (activeTab === 'Người dùng') void fetchUsers(); }, [activeTab, fetchUsers]);
 
+    const fetchRadiusSettings = useCallback(async () => {
+        try {
+            const res = await SettingsService.getSettings();
+            setRadiusSettings(res.data);
+        } catch {
+            // Thieu quyen settings:read hoac DB dang down -- khong chan ca tab, chi lam lenh sinh ra
+            // con cho trong va routerOsRadiusBlockers() se noi ro thieu gi.
+            setRadiusSettings(undefined);
+        }
+    }, []);
+
+    useEffect(() => { if (activeTab === 'Kết nối trực tiếp') void fetchRadiusSettings(); }, [activeTab, fetchRadiusSettings]);
+
     // .wan.download_bytes/.upload_bytes moi bucket -- dung nguyen cho VolumeSpeedChart (component
     // dung chung, tu tinh ca bieu do cot khoi luong lan bieu do line toc do tu points tho nay).
     const wanVolumePoints = useMemo(
@@ -372,7 +390,7 @@ export const DeviceDetail: React.FC = () => {
         [traffic],
     );
 
-    const IFACE_CHART_COLORS = ['#009688', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899', '#84cc16', '#6366f1', '#f97316', '#06b6d4', '#a855f7'];
+    const IFACE_CHART_COLORS = ['#146ca8', '#00a0a6', '#d97706', '#be123c', '#7c3aed', '#4d7c0f', '#db2777', '#0284c7', '#a16207', '#9333ea', '#15803d', '#7e22ce'];
 
     // Gộp toàn bộ interface vào 1 chuỗi bucket dùng chung để vẽ nhiều đường trên 1 biểu đồ — mỗi
     // đường là bandwidth (rx+tx gộp, Mbps) của 1 interface thật.
@@ -413,11 +431,6 @@ export const DeviceDetail: React.FC = () => {
         return map;
     }, [interfaceTraffic]);
 
-    const routerOsScript = useMemo(
-        () => (deviceId ? buildRouterOsScript(deviceId, issuedKey ?? '<DÁN_API_KEY_VỪA_TẠO_VÀO_ĐÂY>', serverUrl) : ''),
-        [deviceId, issuedKey, serverUrl],
-    );
-    const netflowDnsScript = useMemo(() => buildNetflowDnsScript(extractHost(serverUrl)), [serverUrl]);
 
     const packageName = (id?: string | null) => packages.find(p => p.id === id)?.name ?? 'Không rõ';
     const totalUserQuota = subscribers.reduce((sum, s) => sum + (s.quota_used_bytes ?? 0), 0);
@@ -426,10 +439,34 @@ export const DeviceDetail: React.FC = () => {
     // Gop download+upload thanh 1 con so "tong data" -- trang nay khong can phan biet chieu, chi
     // trang chi tiet ship (tab WAN & Reconciliation) moi can tach rieng tung chieu de dien doan.
     const wanTotal = formatBytes(combineBytes(traffic?.wan?.download_bytes, traffic?.wan?.upload_bytes));
-    const countedTotal = formatBytes(combineBytes(traffic?.reconciliation?.counted?.download_bytes, traffic?.reconciliation?.counted?.upload_bytes));
-    const gap = combineGapBytes(traffic?.wan?.download_bytes, traffic?.wan?.upload_bytes, traffic?.reconciliation?.gap?.download_bytes, traffic?.reconciliation?.gap?.upload_bytes);
-    const gapTotal = formatBytes(gap.bytes);
-    const gapStatus: 'unknown' | 'healthy' | 'warning' | 'critical' = gap.pct == null ? 'unknown' : Math.abs(gap.pct) > 15 ? 'critical' : Math.abs(gap.pct) > 5 ? 'warning' : 'healthy';
+    const wanDownload = formatBytes(traffic?.wan?.download_bytes);
+    const wanUpload = formatBytes(traffic?.wan?.upload_bytes);
+    const wanStatus = traffic?.wan?.download_bytes == null && traffic?.wan?.upload_bytes == null ? 'unknown' as const : 'healthy' as const;
+
+    // Xep theo tong byte giam dan -- bang user hotspot doc tu tren xuong la "ai dung nhieu nhat".
+    const crewSorted = useMemo(() => [...crewUsers].sort((a, b) => (b.total_bytes ?? 0) - (a.total_bytes ?? 0)), [crewUsers]);
+    const crewTotalBytes = useMemo(() => crewUsers.reduce((sum, user) => sum + (user.total_bytes ?? 0), 0), [crewUsers]);
+    const crewMaxBytes = crewSorted[0]?.total_bytes ?? 0;
+    const crewTotal = formatBytes(crewTotalBytes);
+    const crewActiveCount = crewUsers.filter(user => user.status === 'ACTIVE').length;
+    const crewBarPct = (value?: number | null) => (!value || crewMaxBytes <= 0 ? 0 : Math.max(2, Math.round((value / crewMaxBytes) * 100)));
+
+    // Lenh RouterOS khai bao chinh thiet bi nay lam RADIUS client. secret chi co gia tri that sau
+    // khi admin bam "Hien secret" -- truoc do lenh co san cho trong, khong bia gia tri gia.
+    const fullConfigInput = {
+        serverAddress: radiusSettings?.radius_server_address,
+        authPort: radiusSettings?.radius_auth_port,
+        acctPort: radiusSettings?.radius_acct_port,
+        coaPort: radiusSettings?.radius_coa_port,
+        secret: revealedSecret,
+        nasIpAddress: device?.ip_address,
+        deviceName: device?.name ?? device?.code,
+        deviceId,
+        pushApiKey: newPushKeyInput || undefined,
+        telemetryUrl: deviceId ? `${serverUrl.replace(/\/+$/, '')}/devices/${deviceId}/telemetry-push` : undefined,
+    };
+    const fullConfigText = buildRouterOsFullConfig(fullConfigInput);
+    const fullConfigBlockers = routerOsFullConfigBlockers(fullConfigInput);
 
     return (
         <div>
@@ -437,7 +474,6 @@ export const DeviceDetail: React.FC = () => {
                 <div>
                     <Link to="/devices" className="muted-text">← Quay lại danh sách thiết bị</Link>
                     <h1>{device?.name ?? 'Chi tiết thiết bị'}</h1>
-                    <p className="page-subtitle">{device?.code} · {device?.role}</p>
                 </div>
             </div>
 
@@ -449,21 +485,40 @@ export const DeviceDetail: React.FC = () => {
                 <>
                     <div className="tab-row" role="tablist">{tabs.map(tab => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} className={activeTab === tab ? 'active' : ''} onClick={() => setActiveTab(tab)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{TAB_ICONS[tab]}{tab}</button>)}</div>
 
-                    <div className="dashboard-meta" style={{ marginTop: '0.6rem' }}>
-                        <span className={`status-dot ${statusOf(device.status)}`}><strong>Trạng thái:</strong>&nbsp;{device.status ?? 'UNKNOWN'}</span>
-                        <span><strong>RouterOS:</strong> {device.routeros_version ?? 'Không rõ'}</span>
-                        <span><strong>Model:</strong> {device.model ?? 'Không rõ'}{device.serial ? ` (SN: ${device.serial})` : ''}</span>
-                        <span><strong>Poll interval:</strong> {device.poll_interval_s ?? '—'}s</span>
-                        <span><strong>Kiến trúc:</strong> {device.architecture ?? 'Không rõ'}</span>
-                        <span><strong>API transport:</strong> {device.api_transport ?? 'Không rõ'}</span>
-                        <span><strong>Lần thấy gần nhất:</strong> {device.last_seen_at ? new Date(device.last_seen_at).toLocaleString('vi-VN') : 'Chưa ghi nhận'}</span>
-                        <span><strong>Mgmt endpoint ref:</strong> {device.mgmt_endpoint_ref ?? 'Chưa gán'}</span>
+                    {/* 4 the tom tat thay cho hang chip cu. Bo Poll interval / Kien truc /
+                        API transport / Mgmt endpoint ref -- la tham so ky thuat noi bo, thuoc
+                        tab "Ket noi & cau hinh" chu khong phai thu nhin dau tien moi lan mo. */}
+                    <div className="mini-stat-row" style={{ marginTop: '0.9rem' }}>
+                        <MiniStat
+                            label="Trạng thái"
+                            value={device.status ?? 'UNKNOWN'}
+                            status={statusOf(device.status)}
+                            icon={<Activity size={13} />}
+                        />
+                        <MiniStat
+                            label="Model"
+                            value={device.model || 'Chưa có dữ liệu'}
+                            hint={device.serial ? `SN: ${device.serial}` : undefined}
+                            icon={<Server size={13} />}
+                        />
+                        <MiniStat
+                            label="RouterOS"
+                            value={device.routeros_version || 'Chưa có dữ liệu'}
+                            hint={device.architecture || undefined}
+                            icon={<Cpu size={13} />}
+                        />
+                        <MiniStat
+                            label="Lần thấy gần nhất"
+                            value={formatLastSeen(device.last_seen_at).text}
+                            hint={device.last_seen_at ? formatLastSeen(device.last_seen_at).title : undefined}
+                            icon={<Clock size={13} />}
+                        />
                     </div>
 
                     {activeTab === 'Traffic' && (
                         <section className="glass-panel dashboard-section">
                             <div className="section-heading">
-                                <div><h2>Total WAN</h2><p>Tổng lưu lượng và tốc độ WAN, tính từ interface_counter_deltas thật.</p></div>
+                                <div><h2>Lưu lượng đã dùng</h2></div>
                                 <div className="tab-row" role="tablist">
                                     {RANGE_OPTIONS.map(opt => <button key={opt.key} type="button" role="tab" aria-selected={range === opt.key} className={range === opt.key ? 'active' : ''} onClick={() => setRange(opt.key)}>{opt.label}</button>)}
                                 </div>
@@ -477,20 +532,79 @@ export const DeviceDetail: React.FC = () => {
                             ) : (
                                 <>
                                     <div className="mini-stat-row">
-                                        <MiniStat label="Tổng data WAN" value={wanTotal.value} unit={wanTotal.unit} hint={rangeOption.label} status={traffic?.wan?.download_bytes == null && traffic?.wan?.upload_bytes == null ? 'unknown' : 'healthy'} />
+                                        <MiniStat icon={<Database size={13} />} label="Tổng đã dùng" value={wanTotal.value} unit={wanTotal.unit} hint={rangeOption.label} status={wanStatus} />
+                                        <MiniStat icon={<ArrowDown size={13} />} label="Tải xuống" value={wanDownload.value} unit={wanDownload.unit} hint={rangeOption.label} status={wanStatus} />
+                                        <MiniStat icon={<ArrowUp size={13} />} label="Tải lên" value={wanUpload.value} unit={wanUpload.unit} hint={rangeOption.label} status={wanStatus} />
+                                        <MiniStat icon={<Users size={13} />} label="User hotspot" value={crewUsers.length} unit="user" hint={`${crewActiveCount} đang hoạt động`} status={crewUsers.length > 0 ? 'healthy' : 'unknown'} />
                                     </div>
 
                                     <VolumeSpeedChart points={wanVolumePoints} granularity={traffic?.period?.granularity ?? rangeOption.granularity} compactTimeLabel={range === '5m' || range === '1d'} />
 
-                                    <div className="section-heading" style={{ marginTop: 24 }}>
-                                        <div><h2>Đối soát dữ liệu (kiểm đếm sai lệch)</h2><p>So tổng data thật đã lên server qua WAN với tổng đã gán cho CREW/BUSINESS/MANAGEMENT — cùng công thức đối soát cấp tàu, lọc riêng cho thiết bị này.</p></div>
+                                    {/* TAM BO theo yeu cau: khoi "Doi soat du lieu (kiem dem sai lech)".
+                                        Khi can dung lai: 3 the Tong WAN / Tong da gan / Sai lech, lay tu
+                                        traffic.reconciliation.counted va traffic.reconciliation.gap. */}
+
+                                    <div className="section-heading" style={{ marginTop: '1.6rem' }}>
+                                        <div><h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Users size={18} style={{ opacity: 0.75 }} />User hotspot (RADIUS)</h2></div>
+                                        <span className="muted-text">{crewSorted.length} user · {crewTotal.value} {crewTotal.unit} · {rangeOption.label}</span>
                                     </div>
-                                    <div className="mini-stat-row">
-                                        <MiniStat label="Tổng WAN (đã lên server)" value={wanTotal.value} unit={wanTotal.unit} hint={rangeOption.label} status={traffic?.wan?.download_bytes == null && traffic?.wan?.upload_bytes == null ? 'unknown' : 'healthy'} />
-                                        <MiniStat label="Tổng đã gán (CREW+BUSINESS+MGMT)" value={countedTotal.value} unit={countedTotal.unit} hint={rangeOption.label} status={traffic?.reconciliation?.counted?.download_bytes == null && traffic?.reconciliation?.counted?.upload_bytes == null ? 'unknown' : 'healthy'} />
-                                        <MiniStat label="Sai lệch" value={gapTotal.value} unit={gapTotal.unit} hint={gap.pct == null ? 'Chưa có %' : `${formatPercent(gap.pct)} so với tổng WAN`} status={gapStatus} />
-                                    </div>
-                                    <p className="muted-text" style={{ fontSize: 12, marginTop: 8 }}>Sai lệch dương = còn traffic WAN chưa được gán vào interface CREW/BUSINESS/MANAGEMENT nào (vd interface đang để "NONE"). Không phải lỗi hệ thống — kiểm tra lại tab Interface để gán đúng nhóm đối soát.</p>
+
+                                    {crewError && <DataStateNotice dataStatus="UNAVAILABLE" title="Không tải được user hotspot" description={crewError} onRetry={() => void fetchCrew()} />}
+
+                                    {crewLoading && crewSorted.length === 0 ? (
+                                        <div className="loading-block"><div className="loading-spinner" /><span>Đang tải user hotspot…</span></div>
+                                    ) : crewSorted.length === 0 ? (
+                                        <div className="empty-state">{device.ship_id ? 'Chưa có phiên RADIUS nào của user gán vào thiết bị này trong khoảng thời gian đã chọn.' : 'Thiết bị chưa gán vào tàu nào nên không tra được RADIUS accounting (dữ liệu CREW là cấp tàu).'}</div>
+                                    ) : (
+                                        <div className="table-shell" style={{ marginTop: 12 }}>
+                                            <table className="data-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>User</th>
+                                                        <th>Trạng thái</th>
+                                                        <th>Gói cước</th>
+                                                        <th style={{ textAlign: 'right' }}>Lượt truy cập</th>
+                                                        <th style={{ textAlign: 'right' }}>Tải xuống</th>
+                                                        <th style={{ textAlign: 'right' }}>Tải lên</th>
+                                                        <th style={{ minWidth: 180 }}>Tổng đã dùng</th>
+                                                        <th>Hoạt động gần nhất</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {crewSorted.map(user => {
+                                                        const down = formatBytes(user.download_bytes);
+                                                        const up = formatBytes(user.upload_bytes);
+                                                        const total = formatBytes(user.total_bytes);
+                                                        const seen = formatLastSeen(user.last_seen_at);
+                                                        return (
+                                                            <tr key={user.username}>
+                                                                <td><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><User size={14} style={{ opacity: 0.7 }} /><strong>{user.username}</strong></span></td>
+                                                                <td>
+                                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                                                        {user.status === 'ACTIVE' ? <CircleCheck size={14} color="var(--success)" /> : user.status === 'STALE' ? <CirclePause size={14} color="var(--warning)" /> : <CircleX size={14} color="var(--muted-text)" />}
+                                                                        {user.status ?? 'UNKNOWN'}
+                                                                    </span>
+                                                                </td>
+                                                                <td>{user.package?.name ?? <span className="muted-text">Không có</span>}</td>
+                                                                <td style={{ textAlign: 'right' }}>{user.access_count ?? user.sessions_count ?? 0}</td>
+                                                                <td style={{ textAlign: 'right' }}>{down.value} {down.unit}</td>
+                                                                <td style={{ textAlign: 'right' }}>{up.value} {up.unit}</td>
+                                                                <td>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                                                        <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'rgba(20, 108, 168, 0.12)', overflow: 'hidden' }}>
+                                                                            <div style={{ width: `${crewBarPct(user.total_bytes)}%`, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #146ca8 0%, #38bdf8 100%)' }} />
+                                                                        </div>
+                                                                        <span style={{ minWidth: 76, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{total.value} {total.unit}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td><span className={seen.muted ? 'muted-text' : undefined} title={seen.title}>{seen.text}</span></td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </section>
@@ -499,7 +613,7 @@ export const DeviceDetail: React.FC = () => {
                     {activeTab === 'Interface' && (
                         <section className="glass-panel dashboard-section">
                             <div className="section-heading">
-                                <div><h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Gauge size={18} style={{ opacity: 0.75 }} />Bandwidth theo từng interface</h2><p>Mỗi đường/hàng là 1 interface thật (rx+tx gộp), tính từ interface_counter_deltas.</p></div>
+                                <div><h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Gauge size={18} style={{ opacity: 0.75 }} />Bandwidth theo từng interface</h2></div>
                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                                     <div className="tab-row" role="tablist">
                                         {RANGE_OPTIONS.map(opt => <button key={opt.key} type="button" role="tab" aria-selected={range === opt.key} className={range === opt.key ? 'active' : ''} onClick={() => setRange(opt.key)}>{opt.label}</button>)}
@@ -615,7 +729,7 @@ export const DeviceDetail: React.FC = () => {
 
                     {activeTab === 'Người dùng' && (
                         <section className="glass-panel dashboard-section">
-                            <div className="section-heading"><div><h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Users size={18} style={{ opacity: 0.75 }} />Người dùng gán vào thiết bị này</h2><p>Subscriber PPPoE/Hotspot có NAS = thiết bị này.</p></div><span>{subscribers.length} user</span></div>
+                            <div className="section-heading"><div><h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Users size={18} style={{ opacity: 0.75 }} />Người dùng gán vào thiết bị này</h2></div><span>{subscribers.length} user</span></div>
 
                             {usersError && <DataStateNotice dataStatus="UNAVAILABLE" title="Không tải được danh sách user" description={usersError} onRetry={() => void fetchUsers()} />}
 
@@ -652,7 +766,7 @@ export const DeviceDetail: React.FC = () => {
                                     {subscribers.length === 0 && !usersLoading && <div className="empty-state">Chưa có user nào được gán vào thiết bị này làm NAS.</div>}
                                     <div className="empty-state" style={{ textAlign: 'left', background: '#eff6ff', border: '1px solid #bfdbfe', flexDirection: 'column' }}>
                                         <strong>Phân loại theo dịch vụ (YouTube/TikTok/...) đã có dữ liệu thật</strong>
-                                        <p style={{ marginTop: 4, marginBottom: 8 }}>Bảng ở trên là subscriber PPPoE/Hotspot (gói cước, quota) — riêng biệt với RADIUS/CREW. Byte thật theo từng dịch vụ (NetFlow v9 + DNS log, xem <code>ipfix_flow_records.classification_method</code>) hiển thị ở tab <strong>CREW</strong> trên trang <strong>Tàu</strong> (theo cả tàu, không phải theo 1 thiết bị), vì RADIUS accounting là dữ liệu cấp tàu.</p>
+                                        <p style={{ marginTop: 4, marginBottom: 8 }}>Bảng ở trên là subscriber Hotspot (gói cước, quota) — riêng biệt với RADIUS/CREW. Byte thật theo từng dịch vụ (NetFlow v9 + DNS log, xem <code>ipfix_flow_records.classification_method</code>) hiển thị ở tab <strong>CREW</strong> trên trang <strong>Tàu</strong> (theo cả tàu, không phải theo 1 thiết bị), vì RADIUS accounting là dữ liệu cấp tàu.</p>
                                         {device.ship_id && <Link to={`/ships?ship=${device.ship_id}`} className="button-secondary compact-button" style={{ display: 'inline-block', textDecoration: 'none' }}>Mở tab CREW của tàu này →</Link>}
                                     </div>
                                 </>
@@ -679,73 +793,97 @@ export const DeviceDetail: React.FC = () => {
                             </div>
 
                             <div style={{ marginBottom: 20 }}>
-                                <span className="muted-text" style={{ display: 'block', marginBottom: 4 }}>Trạng thái push API key</span>
-                                {issuedKey ? (
-                                    <SecretReveal
-                                        heading="Key thật — chỉ hiển thị MỘT LẦN DUY NHẤT, hãy sao chép/dán vào router ngay:"
-                                        value={issuedKey}
-                                        copied={copyFeedback === 'key'}
-                                        onCopy={() => void copyText(issuedKey, 'key')}
-                                        caption="Rời khỏi trang này sẽ không xem lại được key — nếu mất, hãy cấp key mới (key cũ sẽ bị vô hiệu)."
-                                    />
-                                ) : device.push_key_configured ? (
-                                    <p>Đã cấu hình — cấp lúc {device.push_key_issued_at ? new Date(device.push_key_issued_at).toLocaleString('vi-VN') : 'không rõ'}. Server chỉ giữ bản băm (sha256), không lưu key thật.</p>
+                                <span className="muted-text" style={{ display: 'block', marginBottom: 4 }}>Push API key — do admin tự đặt (không còn tự sinh ngẫu nhiên)</span>
+                                {device.push_key_configured ? (
+                                    <p>Đã cấu hình — đặt lúc {device.push_key_issued_at ? new Date(device.push_key_issued_at).toLocaleString('vi-VN') : 'không rõ'}. Server chỉ giữ bản băm (sha256), không lưu key thật.</p>
                                 ) : (
-                                    <p className="muted-text">Chưa cấp push API key cho thiết bị này — router sẽ nhận DEVICE_PUSH_NOT_CONFIGURED (409) nếu gửi telemetry lúc này.</p>
+                                    <p className="muted-text">Chưa đặt push API key cho thiết bị này — router sẽ nhận DEVICE_PUSH_NOT_CONFIGURED (409) nếu gửi telemetry lúc này.</p>
                                 )}
+                                <div className="settings-field" style={{ margin: '10px 0 6px', maxWidth: 320 }}>
+                                    <label>{device.push_key_configured ? 'Đặt lại API key' : 'Đặt API key'}</label>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <input className="filter-select" type="text" minLength={8} value={newPushKeyInput} onChange={e => setNewPushKeyInput(e.target.value)} placeholder="Tối thiểu 8 ký tự" style={{ fontFamily: 'var(--font-mono)' }} />
+                                        <button type="button" className="button-secondary compact-button" title="Tự sinh giá trị ngẫu nhiên" onClick={() => setNewPushKeyInput(generateRandomHex(32))}><Shuffle size={14} /></button>
+                                    </div>
+                                </div>
                                 {keyError && <p style={{ color: '#dc2626', fontSize: 12 }}>{keyError}</p>}
-                                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                                    <button type="button" className="filter-apply" disabled={keyBusy} onClick={() => void issueKey()}>{keyBusy ? 'Đang xử lý…' : device.push_key_configured ? 'Cấp lại API key' : 'Tạo API key'}</button>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <button type="button" className="filter-apply" disabled={keyBusy || newPushKeyInput.length < 8} onClick={() => void setPushKey()}>{keyBusy ? 'Đang lưu…' : 'Lưu API key'}</button>
                                     {device.push_key_configured && <button type="button" className="button-secondary compact-button" disabled={keyBusy} onClick={() => void revokeKey()}>Thu hồi key</button>}
+                                    {keySaved && <span className="muted-text" style={{ color: 'var(--success)' }}>Đã lưu ✓</span>}
                                 </div>
                             </div>
 
                             <div style={{ marginBottom: 20 }}>
-                                <span className="muted-text" style={{ display: 'block', marginBottom: 4 }}>Shared secret RADIUS (dùng để xác thực Accounting-Request/Access-Request thật từ router này)</span>
-                                {issuedRadiusSecret ? (
-                                    <SecretReveal
-                                        heading="Secret thật — chỉ hiển thị MỘT LẦN DUY NHẤT, hãy dán vào RADIUS Client trên router ngay:"
-                                        value={issuedRadiusSecret}
-                                        copied={copyFeedback === 'radius'}
-                                        onCopy={() => void copyText(issuedRadiusSecret, 'radius')}
-                                        caption="Rời khỏi trang này sẽ không xem lại được — nếu mất, cấp secret mới (secret cũ sẽ bị vô hiệu ngay, router dùng secret cũ sẽ bị RADIUS server từ chối)."
-                                    />
-                                ) : device.radius_secret_configured ? (
-                                    <p>Đã cấu hình — cấp lúc {device.radius_secret_issued_at ? new Date(device.radius_secret_issued_at).toLocaleString('vi-VN') : 'không rõ'}. Server chỉ giữ credential_ref trỏ tới biến môi trường (ADR-05), không lưu secret thật trong DB.</p>
+                                <span className="muted-text" style={{ display: 'block', marginBottom: 4 }}>Shared secret RADIUS — dùng để xác thực Accounting-Request/Access-Request thật từ router này</span>
+                                {device.radius_secret_configured ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                        {revealedSecret ? (
+                                            <>
+                                                <code style={{ background: 'rgba(20, 108, 168, 0.08)', padding: '4px 9px', borderRadius: 6, fontSize: 13, wordBreak: 'break-all' }}>{revealedSecret}</code>
+                                                <button type="button" className="button-secondary compact-button" onClick={() => void copyText(revealedSecret, 'radius-secret')} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>{copyFeedback === 'radius-secret' ? <Check size={13} /> : <Copy size={13} />}{copyFeedback === 'radius-secret' ? 'Đã chép' : 'Sao chép'}</button>
+                                                <button type="button" className="button-secondary compact-button" onClick={() => setRevealedSecret(undefined)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><EyeOff size={13} />Ẩn</button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span className="status-dot healthy">Đã cấu hình</span>
+                                                <button type="button" className="button-secondary compact-button" disabled={revealBusy} onClick={() => void revealRadiusSecret()} style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Eye size={13} />{revealBusy ? 'Đang lấy…' : 'Hiện secret'}</button>
+                                            </>
+                                        )}
+                                        <span className="muted-text" style={{ fontSize: 12 }}>Đặt lúc {device.radius_secret_issued_at ? new Date(device.radius_secret_issued_at).toLocaleString('vi-VN') : 'không rõ'}</span>
+                                    </div>
                                 ) : (
-                                    <p className="muted-text">Chưa cấp secret RADIUS cho thiết bị này — mọi gói Accounting-Request/Access-Request thật từ router sẽ bị server âm thầm bỏ qua.</p>
+                                    <p className="muted-text">Chưa đặt secret RADIUS cho thiết bị này — mọi gói Accounting-Request/Access-Request thật từ router sẽ bị server âm thầm bỏ qua.</p>
                                 )}
+                                {revealError && <p style={{ color: 'var(--danger)', fontSize: 12, marginTop: 6 }}>{revealError}</p>}
+                                {revealedSecret && <p className="muted-text" style={{ fontSize: 12, marginTop: 6 }}>Mỗi lần hiện secret đều được ghi vào nhật ký kiểm toán (<code>device.radius_secret_reveal</code>).</p>}
+                                <div className="settings-field" style={{ margin: '10px 0 6px', maxWidth: 320 }}>
+                                    <label>{device.radius_secret_configured ? 'Đặt lại secret' : 'Đặt secret RADIUS'}</label>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <input className="filter-select" type="text" minLength={4} value={newRadiusSecretInput} onChange={e => setNewRadiusSecretInput(e.target.value)} placeholder="Tối thiểu 4 ký tự" style={{ fontFamily: 'var(--font-mono)' }} />
+                                        <button type="button" className="button-secondary compact-button" title="Tự sinh giá trị ngẫu nhiên" onClick={() => setNewRadiusSecretInput(generateRandomHex(24))}><Shuffle size={14} /></button>
+                                    </div>
+                                </div>
                                 {radiusSecretError && <p style={{ color: '#dc2626', fontSize: 12 }}>{radiusSecretError}</p>}
-                                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                                    <button type="button" className="filter-apply" disabled={radiusSecretBusy} onClick={() => void issueRadiusSecret()}>{radiusSecretBusy ? 'Đang xử lý…' : device.radius_secret_configured ? 'Cấp lại secret' : 'Tạo secret RADIUS'}</button>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <button type="button" className="filter-apply" disabled={radiusSecretBusy || newRadiusSecretInput.length < 4} onClick={() => void setRadiusSecretValue()}>{radiusSecretBusy ? 'Đang lưu…' : 'Lưu secret'}</button>
                                     {device.radius_secret_configured && <button type="button" className="button-secondary compact-button" disabled={radiusSecretBusy} onClick={() => void revokeRadiusSecret()}>Thu hồi secret</button>}
+                                    {radiusSecretSaved && <span className="muted-text" style={{ color: 'var(--success)' }}>Đã lưu ✓</span>}
                                 </div>
                             </div>
 
-                            <div>
-                                <span className="muted-text" style={{ display: 'block', marginBottom: 4 }}>Server URL (nhìn từ phía router — sửa lại nếu router không tới được địa chỉ này, vd domain/IP công khai thật)</span>
-                                <input type="text" value={serverUrl} onChange={e => setServerUrl(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e8f0', marginBottom: 12, fontFamily: 'monospace', fontSize: 12 }} />
-
-                                <span className="muted-text" style={{ display: 'block', marginBottom: 4 }}>Script RouterOS — dán vào System → Scheduler → (+) → On Event, Interval = 00:05:00</span>
-                                <div style={{ display: 'flex', gap: 8 }}>
-                                    <textarea readOnly value={routerOsScript} rows={14} style={{ flex: 1, fontFamily: 'monospace', fontSize: 12, padding: 10, borderRadius: 6, border: '1px solid #e2e8f0', background: '#0f172a', color: '#e2e8f0', resize: 'vertical' }} />
-                                </div>
-                                <button type="button" className="button-secondary compact-button" style={{ marginTop: 8 }} onClick={() => void copyText(routerOsScript, 'script')}>{copyFeedback === 'script' ? 'Đã chép ✓' : 'Sao chép script'}</button>
-                                {!issuedKey && <p className="muted-text" style={{ fontSize: 12, marginTop: 4 }}>Script trên đang dùng placeholder cho API key — bấm "Tạo API key" ở trên để script tự điền key thật.</p>}
+                            <div style={{ marginBottom: 20 }}>
+                                <span className="muted-text" style={{ display: 'block', marginBottom: 4 }}>Server URL cho telemetry push (nhìn từ phía router — sửa lại nếu router phải đi qua domain/IP công khai khác)</span>
+                                <input type="text" value={serverUrl} onChange={e => setServerUrl(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e8f0', fontFamily: 'monospace', fontSize: 12 }} />
                             </div>
 
-                            <div className="dashboard-meta" style={{ marginTop: 16, marginBottom: 20 }}>
-                                <span><strong>Lần nhận dữ liệu gần nhất:</strong> {device.last_seen_at ? new Date(device.last_seen_at).toLocaleString('vi-VN') : 'Chưa nhận được push nào'}</span>
-                            </div>
-
-                            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: 20 }}>
+                            {/* MOT cua so duy nhat cho toan bo cau hinh router. Truoc day cho nay co 3 o rieng
+                                (RADIUS / push telemetry / NetFlow+DNS), moi o mot nut sao chep va mot noi dan
+                                khac nhau -- Terminal cho 2 cai, Scheduler cho cai con lai. Dan thieu 1 manh la
+                                du lieu khong len ma khong co loi nao bao. */}
+                            <div style={{ borderTop: '1px solid var(--border-color, #e2e8f0)', paddingTop: 20 }}>
                                 <div className="section-heading">
-                                    <div><h2>Cấu hình NetFlow + DNS log (phân tích theo dịch vụ)</h2><p>WAN dùng bao nhiêu cho YouTube/TikTok/... — ghép NetFlow v9 (byte tới IP nào) với DNS log (IP đó là dịch vụ gì). Dùng chung Server URL ở trên; chỉ THÊM vào router, không đổi cấu hình nào khác.</p></div>
+                                    <div>
+                                        <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Terminal size={18} style={{ opacity: 0.75 }} />Lệnh cấu hình MikroTik</h2>
+                                        <p>Toàn bộ cấu hình cho thiết bị này trong một khối: RADIUS, NetFlow v9, DNS log và script đẩy counter mỗi 5 phút. Dán một lần vào Terminal của router — không cần mở Scheduler.</p>
+                                    </div>
+                                    <button type="button" className="filter-apply" onClick={() => void copyText(fullConfigText, 'full-config')}>{copyFeedback === 'full-config' ? 'Đã chép ✓' : 'Sao chép toàn bộ'}</button>
                                 </div>
-                                <span className="muted-text" style={{ display: 'block', marginBottom: 4 }}>Cấu hình — dán vào Terminal (không phải Scheduler), chạy 1 lần</span>
-                                <textarea readOnly value={netflowDnsScript} rows={10} style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, padding: 10, borderRadius: 6, border: '1px solid #e2e8f0', background: '#0f172a', color: '#e2e8f0', resize: 'vertical' }} />
-                                <button type="button" className="button-secondary compact-button" style={{ marginTop: 8 }} onClick={() => void copyText(netflowDnsScript, 'netflow-dns')}>{copyFeedback === 'netflow-dns' ? 'Đã chép ✓' : 'Sao chép cấu hình'}</button>
-                                <p className="muted-text" style={{ fontSize: 12, marginTop: 8 }}>Địa chỉ đích lấy trực tiếp từ Server URL ở trên (host: <code>{extractHost(serverUrl)}</code>) — sửa Server URL nếu router cần tới một địa chỉ khác cho NetFlow/DNS log so với push telemetry. Sau khi dán, kiểm tra dữ liệu thật ở tab CREW/BUSINESS trên trang Tàu (không phải trang này — trang này chỉ quản lý 1 thiết bị, còn CREW/BUSINESS là theo cả tàu).</p>
+
+                                {fullConfigBlockers.length > 0 && (
+                                    <div className="empty-state" style={{ textAlign: 'left', flexDirection: 'column', alignItems: 'flex-start', background: '#fffbeb', border: '1px solid #fcd34d', marginBottom: 12 }}>
+                                        <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><TriangleAlert size={15} color="var(--warning)" />Lệnh còn chỗ trống</strong>
+                                        <p style={{ marginTop: 4, marginBottom: 0 }}>Còn thiếu: {fullConfigBlockers.join('; ')}. Dán lúc này router sẽ báo lỗi cú pháp ở đúng chỗ còn dấu ngoặc nhọn.</p>
+                                    </div>
+                                )}
+
+                                <pre style={{ background: '#0d3352', color: '#e2f1fb', padding: '14px 16px', borderRadius: 10, overflowX: 'auto', maxHeight: 460, fontSize: 12, lineHeight: 1.6, margin: 0 }}>{fullConfigText}</pre>
+
+                                <p className="muted-text" style={{ fontSize: 12, marginTop: 8 }}>NetFlow, DNS log và RADIUS đều gửi UDP tới <code>{radiusSettings?.radius_server_address ?? 'địa chỉ chưa đặt'}</code> (Cài đặt → RADIUS) vì cả ba cổng do cùng một tiến trình backend lắng nghe; riêng telemetry push đi bằng HTTP tới Server URL ở trên, nên hai địa chỉ có thể khác nhau nếu router phải qua reverse proxy. Sau khi dán, số liệu theo dịch vụ xem ở tab CREW/BUSINESS trên trang Tàu — dữ liệu đó là cấp tàu, không phải cấp thiết bị.</p>
+                            </div>
+
+                            <div className="dashboard-meta" style={{ marginTop: 16 }}>
+                                <span><strong>Lần nhận dữ liệu gần nhất:</strong> {device.last_seen_at ? new Date(device.last_seen_at).toLocaleString('vi-VN') : 'Chưa nhận được push nào'}</span>
                             </div>
                         </section>
                     )}

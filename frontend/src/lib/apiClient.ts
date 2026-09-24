@@ -31,3 +31,27 @@ axios.interceptors.request.use(config => {
     }
     return config;
 });
+
+/**
+ * Token gio CO HAN (12 gio, xem backend libs/auth-stub/token.ts). Khong co cho nay thi khi token
+ * het han, moi man hinh deu bao "khong tai duoc du lieu" ma khong he goi y phai dang nhap lai --
+ * nguoi dung se tuong he thong hong.
+ *
+ * Bo qua chinh /auth/login: 401 o do la sai mat khau, trang Login tu hien thong bao, khong duoc
+ * nap lai trang giua chung.
+ */
+axios.interceptors.response.use(
+    response => response,
+    error => {
+        const status = error?.response?.status;
+        const url: string = error?.config?.url ?? '';
+        if (status === 401 && !url.includes('/auth/login')) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('permissions');
+            if (!window.location.pathname.startsWith('/login')) {
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    },
+);

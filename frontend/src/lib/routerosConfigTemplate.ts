@@ -3,7 +3,8 @@
  * cung cấp), CỘNG THÊM khối NetFlow v9 (/ip traffic-flow) + DNS log (/system logging topics=dns)
  * — 2 nguồn dữ liệu thật mà NetflowCollectorService/DnsLogCollectorService lắng nghe (xem
  * backend/src/libs/netflow-collector, dns-log-collector) để phân loại "WAN dùng bao nhiêu cho
- * YouTube/TikTok/..." theo tài liệu tham khảo. Địa chỉ server dùng thẳng `10.149.79.186` — server
+ * YouTube/TikTok/..." theo tài liệu tham khảo. Địa chỉ server KHÔNG còn hard-code (xem ghi chú ở
+ * SERVER_ADDRESS_PLACEHOLDER bên dưới) — server
  * thật đang chạy hệ thống này (người dùng xác nhận, đã kiểm chứng qua NetFlow thật nhận được từ Hai
  * Nam 81); chỉ `<RADIUS_SECRET>` còn là placeholder vì mỗi thiết bị có secret riêng (xem tab "Kết
  * nối trực tiếp" của thiết bị đó). Chỉ dùng để ĐIỀN SẴN ô "Cấu hình router" khi 1 thiết bị chưa từng
@@ -67,12 +68,12 @@ set www-ssl certificate=router disabled=no
 # secret= phai khop dung voi RADIUS secret da cap cho thiet bi nay o tab "Ket noi truc tiep"
 # (server that nghe UDP 1813, se tu choi goi Accounting neu secret sai).
 
-# Dia chi server RADIUS/NetFlow/DNS log: 10.149.79.186 -- server that dang chay he thong nay (da
+# Dia chi server RADIUS/NetFlow/DNS log: thay <DIA_CHI_SERVER_RADIUS> bang gia tri trong Cai dat ->
 # xac nhan reachable qua NetFlow that). Ban dau Config.txt goc ghi 172.29.172.3 (kem
 # src-address=172.29.163.95) -- dia chi tu mang cu, khong con dung, da bo src-address vi khong con
 # khop mang hien tai; neu router can chi dinh IP nguon rieng (vd qua VPN/ZeroTier) hay them lai
 # src-address=<IP_NGUON_THAT_TREN_ROUTER>.
-add address=10.149.79.186 require-message-auth=no secret=<RADIUS_SECRET> service=hotspot timeout=5s
+add address=<DIA_CHI_SERVER_RADIUS> require-message-auth=no secret=<RADIUS_SECRET> service=hotspot timeout=5s
 /radius incoming
 set accept=yes
 /ip traffic-flow
@@ -80,12 +81,12 @@ set active-flow-timeout=1m cache-entries=32k enabled=yes inactive-flow-timeout=2
 /ip traffic-flow target
 # Cong 2055 = NetFlow v9 UDP server cua he thong, dung de do byte theo tung ket noi (WAN dung bao
 # nhieu cho dich vu nao).
-add dst-address=10.149.79.186 port=2055 version=9
+add dst-address=<DIA_CHI_SERVER_RADIUS> port=2055 version=9
 /system logging action
 # Cung server, cong 5514 -- DNS log UDP collector, dung de biet 1 dia chi IP la dich vu gi
 # (Youtube/TikTok/...), ghep voi so lieu NetFlow o tren. KHONG doi topics=dns. Ten action RouterOS
 # chi cho phep chu+so (khong dau gach ngang), dung "remotedns" chu khong phai "remote-dns".
-add name=remotedns remote=10.149.79.186 remote-port=5514 target=remote
+add name=remotedns remote=<DIA_CHI_SERVER_RADIUS> remote-port=5514 target=remote
 /system logging
 add action=remotedns topics=dns
 /system clock
@@ -98,7 +99,19 @@ set enter-setup-on=delete-key
 add interval=5m name=sch_http_get_interfaces on-event=http_get_interfaces policy=ftp,reboot,read,write,policy,test,password,sniff,sensitive,romon start-date=2025-06-20 start-time=00:00:00
 `;
 
-const FLEET_SERVER_ADDRESS = '10.149.79.186';
+/**
+ * Dia chi server dung khi CHUA doc duoc Settings.radius_server_address.
+ *
+ * Truoc day day la hang so cung '10.149.79.186' va giao dien con khang dinh "luon co dinh, khong
+ * doi duoc". Do la dia chi cua dung may chu do NHUNG tren mot network khac -- router di ra bang
+ * ZeroTier va chi toi duoc no qua 172.29.1.186. Nghia la moi config sinh ra tu man hinh Thiet bi
+ * va Tau deu tro sai dich, va khong ai sua duoc vi gia tri nam trong source code.
+ *
+ * Gio dia chi den tu Settings (RADIUS_SERVER_ADDRESS), giong bo sinh lenh o routerosFleetCommands.ts.
+ * Hang so nay chi con la placeholder de nguoi dung THAY NGAY duoc la thieu cau hinh, thay vi am
+ * tham dan mot IP sai vao router.
+ */
+const SERVER_ADDRESS_PLACEHOLDER = '<DAT "Dia chi server RADIUS" trong Cai dat>';
 
 export type WanMode = 'single' | 'failover' | 'loadbalance';
 
@@ -110,6 +123,11 @@ export type FleetConfigOptions = {
     enableBusiness: boolean; // bridge BUSINESS + DHCP
     enableZeroTier: boolean;
     radiusSecret: string; // '<RADIUS_SECRET>' nếu chưa cấp, hoặc secret thật sau khi issueRadiusSecret()
+  /**
+   * Địa chỉ server như ROUTER nhìn thấy — lấy từ Settings.radius_server_address, KHÔNG hard-code.
+   * Bỏ trống thì sinh ra placeholder để người dùng thấy ngay là thiếu cấu hình.
+   */
+  serverAddress?: string | null;
 };
 
 export const DEFAULT_FLEET_CONFIG_OPTIONS: FleetConfigOptions = {
@@ -120,6 +138,7 @@ export const DEFAULT_FLEET_CONFIG_OPTIONS: FleetConfigOptions = {
     enableBusiness: true,
     enableZeroTier: true,
     radiusSecret: '<RADIUS_SECRET>',
+  serverAddress: null,
 };
 
 /**
@@ -127,7 +146,7 @@ export const DEFAULT_FLEET_CONFIG_OPTIONS: FleetConfigOptions = {
  * với wanCount=1 + mọi toggle bật (mặc định), các dòng LỆNH giống hệt DEFAULT_ROUTEROS_CONFIG_TEMPLATE
  * ở trên (đã verify thật trên Hai Nam 81); chỉ khác ở comment giải thích (ngắn gọn hơn, không lặp lại
  * lịch sử "vì sao 172.29.172.3 sai" ở mỗi lần sinh) và `radiusSecret` điền được giá trị thật thay vì
- * luôn để placeholder. Địa chỉ server (10.149.79.186) LUÔN cố định — không có option nào đổi được,
+ * luôn để placeholder. Địa chỉ server lấy từ Settings qua options.serverAddress — KHÔNG còn cố định
  * đúng yêu cầu "server RADIUS và server backend phải giữ nguyên không đổi".
  *
  * Kiểu WAN "failover": DHCP client dùng distance= tăng dần theo thứ tự ưu tiên (RouterOS tự chuyển
@@ -136,6 +155,7 @@ export const DEFAULT_FLEET_CONFIG_OPTIONS: FleetConfigOptions = {
  * động nên để placeholder <WANn_GATEWAY>, người dùng tự điền sau khi router đã lên DHCP thật.
  */
 export function buildFleetConfigFromOptions(options: FleetConfigOptions): string {
+    const serverAddress = options.serverAddress || SERVER_ADDRESS_PLACEHOLDER;
     const lines: string[] = [];
     const lan: string[] = [];
     if (options.enableCrewHotspot) lan.push('CREW');
@@ -248,7 +268,7 @@ export function buildFleetConfigFromOptions(options: FleetConfigOptions): string
         lines.push('/radius');
         lines.push('# secret= phai khop dung voi RADIUS secret da cap cho thiet bi nay (server that nghe UDP');
         lines.push('# 1813, se tu choi goi Accounting neu secret sai). Dia chi server LUON co dinh, khong doi.');
-        lines.push(`add address=${FLEET_SERVER_ADDRESS} require-message-auth=no secret=${options.radiusSecret} service=hotspot timeout=5s`);
+        lines.push(`add address=${serverAddress} require-message-auth=no secret=${options.radiusSecret} service=hotspot timeout=5s`);
         lines.push('/radius incoming');
         lines.push('set accept=yes');
     }
@@ -258,12 +278,12 @@ export function buildFleetConfigFromOptions(options: FleetConfigOptions): string
     lines.push('/ip traffic-flow target');
     lines.push('# Cong 2055 = NetFlow v9 UDP server cua he thong, dung de do byte theo tung ket noi (WAN dung');
     lines.push('# bao nhieu cho dich vu nao). Dia chi server LUON co dinh, khong doi.');
-    lines.push(`add dst-address=${FLEET_SERVER_ADDRESS} port=2055 version=9`);
+    lines.push(`add dst-address=${serverAddress} port=2055 version=9`);
     if (options.enableCrewHotspot) {
         lines.push('/system logging action');
         lines.push('# Cung server, cong 5514 -- DNS log UDP collector. Ten action RouterOS chi cho phep chu+so');
         lines.push('# (khong dau gach ngang), dung "remotedns" chu khong phai "remote-dns".');
-        lines.push(`add name=remotedns remote=${FLEET_SERVER_ADDRESS} remote-port=5514 target=remote`);
+        lines.push(`add name=remotedns remote=${serverAddress} remote-port=5514 target=remote`);
         lines.push('/system logging');
         lines.push('add action=remotedns topics=dns');
     }

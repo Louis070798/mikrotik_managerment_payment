@@ -46,7 +46,7 @@ export const Login: React.FC = () => {
         <div className="login-container">
             <div className="login-box glass-panel">
                 <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <Anchor size={48} color="#3b82f6" style={{ marginBottom: '1rem' }} />
+                    <Anchor size={48} color="#146ca8" style={{ marginBottom: '1rem' }} />
                     <h2>Fleet Login</h2>
                     <p style={{ color: 'var(--text-muted)' }}>Sign in to manage MikroTik devices</p>
                 </div>

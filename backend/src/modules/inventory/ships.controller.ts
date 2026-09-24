@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
-import { RequirePermission } from '@auth-stub/auth-stub.guard';
+import { RequirePermission, TenantScoped } from '@auth-stub/auth-stub.guard';
 import { zodBody } from '@common/zod-validation.pipe';
 import { ShipsService } from './ships.service';
 import { CreateShipSchema, ListShipsQuerySchema, UpdateShipSchema } from './dto';
@@ -10,6 +10,7 @@ export class ShipsController {
 
   @Get()
   @RequirePermission('inventory:read')
+  @TenantScoped()
   list(@Query() query: Record<string, string>) {
     const parsed = ListShipsQuerySchema.parse(query);
     return this.service.list({ areaId: parsed.area_id, status: parsed.status, q: parsed.q });
@@ -17,6 +18,7 @@ export class ShipsController {
 
   @Get(':shipId')
   @RequirePermission('inventory:read')
+  @TenantScoped()
   getOne(@Param('shipId') shipId: string) {
     return this.service.getById(shipId);
   }

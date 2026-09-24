@@ -16,37 +16,37 @@ export const DashboardFilters: React.FC<Props> = ({ value, onChange, onApply, lo
     return (
         <form className="filters-bar" onSubmit={event => { event.preventDefault(); onApply(); }}>
             <label className="filter-control">
-                <span>Period</span>
+                <span>Khoảng thời gian</span>
                 <select className="filter-select" value={value.range} onChange={event => update('range', event.target.value as DashboardRange)}>
-                    <option value="1h">Last 1 hour</option>
-                    <option value="24h">Last 24 hours</option>
-                    <option value="7d">Last 7 days</option>
+                    <option value="1h">1 giờ qua</option>
+                    <option value="24h">24 giờ qua</option>
+                    <option value="7d">7 ngày qua</option>
                 </select>
             </label>
             <label className="filter-control">
-                <span>Granularity</span>
+                <span>Độ chi tiết</span>
                 <select className="filter-select" value={value.granularity} onChange={event => update('granularity', event.target.value as DashboardGranularity)}>
-                    <option value="1m">1 minute</option>
-                    <option value="5m">5 minutes</option>
-                    <option value="1h">1 hour</option>
-                    <option value="1d">1 day</option>
+                    <option value="1m">1 phút</option>
+                    <option value="5m">5 phút</option>
+                    <option value="1h">1 giờ</option>
+                    <option value="1d">1 ngày</option>
                 </select>
             </label>
             <label className="filter-control">
-                <span>Zone</span>
+                <span>Nhóm</span>
                 <select className="filter-select" value={value.zone} onChange={event => update('zone', event.target.value as DashboardZone)}>
-                    <option value="ALL">All zones</option>
+                    <option value="ALL">Tất cả nhóm</option>
                     <option value="CREW">CREW</option>
                     <option value="BUSINESS">BUSINESS</option>
                     <option value="MANAGEMENT">MANAGEMENT</option>
                 </select>
             </label>
             <label className="filter-control">
-                <span>Timezone</span>
-                <input className="filter-select" value={value.timezone} onChange={event => update('timezone', event.target.value)} aria-label="Timezone" />
+                <span>Múi giờ</span>
+                <input className="filter-select" value={value.timezone} onChange={event => update('timezone', event.target.value)} aria-label="Múi giờ" />
             </label>
             <button type="submit" disabled={loading} className="filter-apply">
-                {loading ? 'Loading…' : 'Apply filters'}
+                {loading ? 'Đang tải…' : 'Áp dụng bộ lọc'}
             </button>
         </form>
     );

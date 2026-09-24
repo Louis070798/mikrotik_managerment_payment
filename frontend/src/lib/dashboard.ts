@@ -52,7 +52,7 @@ export function buildDashboardQuery(filters: DashboardFiltersValue): DashboardQu
 }
 
 export function formatBytes(value: number | null | undefined): { value: string; unit: string } {
-    if (value === null || value === undefined) return { value: 'Not available', unit: '' };
+    if (value === null || value === undefined) return { value: 'Chưa có dữ liệu', unit: '' };
     if (value < 1000) return { value: value.toLocaleString(), unit: 'bytes' };
     const units = ['kB', 'MB', 'GB', 'TB', 'PB'];
     let amount = value;
@@ -81,7 +81,7 @@ export function pickByteUnit(maxBytes: number): { divisor: number; label: string
 }
 
 export function formatRate(value: number | null | undefined): { value: string; unit: string } {
-    if (value === null || value === undefined) return { value: 'Not available', unit: '' };
+    if (value === null || value === undefined) return { value: 'Chưa có dữ liệu', unit: '' };
     if (value < 1000) return { value: value.toLocaleString(), unit: 'bit/s' };
     const units = ['kbit/s', 'Mbit/s', 'Gbit/s', 'Tbit/s'];
     let amount = value;
@@ -114,16 +114,16 @@ export function combineGapBytes(measuredDownload: number | null | undefined, mea
 }
 
 export function formatVnd(value: number | null | undefined): string {
-    if (value === null || value === undefined) return 'Not available';
+    if (value === null || value === undefined) return 'Chưa có dữ liệu';
     return `${value.toLocaleString('vi-VN')} ₫`;
 }
 
 export function formatCount(value: number | null | undefined): string {
-    return value === null || value === undefined ? 'Not available' : value.toLocaleString();
+    return value === null || value === undefined ? 'Chưa có dữ liệu' : value.toLocaleString();
 }
 
 export function formatPercent(value: number | null | undefined): string {
-    return value === null || value === undefined ? 'Not available' : `${value.toFixed(1)}%`;
+    return value === null || value === undefined ? 'Chưa có dữ liệu' : `${value.toFixed(1)}%`;
 }
 
 export function formatPeriod(period?: DashboardPeriod): string {
@@ -138,6 +138,24 @@ export function freshnessLabel(meta?: BaseMeta): string {
         return `${meta.data_freshness_seconds}s old`;
     }
     return 'Not reported';
+}
+
+/** Doi last_seen_at (ISO) thanh nhan tuong doi tieng Viet. Tinh tai thoi diem render nen khong
+ *  tu chay tiep -- du cho bang danh sach va the tom tat. Gio phut chinh xac nam o .title. */
+export function formatLastSeen(iso?: string | null): { text: string; muted: boolean; title: string } {
+    if (!iso) return { text: 'Chưa ghi nhận', muted: true, title: 'Thiết bị chưa từng gửi dữ liệu về' };
+    const at = new Date(iso);
+    const ms = at.getTime();
+    if (Number.isNaN(ms)) return { text: 'Chưa ghi nhận', muted: true, title: String(iso) };
+    const title = at.toLocaleString('vi-VN');
+    const mins = Math.floor(Math.max(0, Date.now() - ms) / 60000);
+    if (mins < 1) return { text: 'Vừa xong', muted: false, title };
+    if (mins < 60) return { text: mins + ' phút trước', muted: false, title };
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return { text: hours + ' giờ trước', muted: false, title };
+    const days = Math.floor(hours / 24);
+    if (days < 30) return { text: days + ' ngày trước', muted: true, title };
+    return { text: at.toLocaleDateString('vi-VN'), muted: true, title };
 }
 
 export function metricStatus(

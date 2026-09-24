@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin } from 'lucide-react';
+import { Anchor, ArrowDown, ArrowUp, MapPin } from 'lucide-react';
 import { DashboardService, DefaultService } from '../api';
 import type { AreaDashboardResponse } from '../api/models/AreaDashboardResponse';
 import type { AreaItem } from '../api/models/AreaItem';
@@ -95,10 +95,10 @@ export const AreaDashboard: React.FC = () => {
                 <>
                     <div className="dashboard-meta"><span><strong>Area:</strong> {data.area?.name ?? selectedAreaId}</span><span><strong>Period:</strong> {formatPeriod(data.period)}</span><span><strong>Freshness:</strong> {freshnessLabel(meta)}</span><span><strong>Sources:</strong> inventory, interface counters, RADIUS, IPFIX</span></div>
                     <div className="grid-cards">
-                        <MetricCard title="Area ships" value={formatCount(data.inventory?.ship_count)} unit="ships" period={formatPeriod(data.period)} source="Inventory database" freshness={freshnessLabel(meta)} status="healthy" />
-                        <MetricCard title="Active ships" value={formatCount(data.inventory?.active_ships)} unit="ships" period={formatPeriod(data.period)} source="Inventory database" freshness={freshnessLabel(meta)} status="healthy" />
-                        <MetricCard title="WAN download" value={down.value} unit={down.unit} period={formatPeriod(data.period)} source="Interface counters" freshness={freshnessLabel(meta)} status={traffic?.wan_download_bytes === null || traffic?.wan_download_bytes === undefined ? 'unknown' : 'healthy'} />
-                        <MetricCard title="WAN upload" value={up.value} unit={up.unit} period={formatPeriod(data.period)} source="Interface counters" freshness={freshnessLabel(meta)} status={traffic?.wan_upload_bytes === null || traffic?.wan_upload_bytes === undefined ? 'unknown' : 'healthy'} />
+                        <MetricCard icon={<Anchor size={15} />} title="Area ships" value={formatCount(data.inventory?.ship_count)} unit="ships" period={formatPeriod(data.period)} source="Inventory database" freshness={freshnessLabel(meta)} status="healthy" />
+                        <MetricCard icon={<Anchor size={15} />} title="Active ships" value={formatCount(data.inventory?.active_ships)} unit="ships" period={formatPeriod(data.period)} source="Inventory database" freshness={freshnessLabel(meta)} status="healthy" />
+                        <MetricCard icon={<ArrowDown size={15} />} title="WAN download" value={down.value} unit={down.unit} period={formatPeriod(data.period)} source="Interface counters" freshness={freshnessLabel(meta)} status={traffic?.wan_download_bytes === null || traffic?.wan_download_bytes === undefined ? 'unknown' : 'healthy'} />
+                        <MetricCard icon={<ArrowUp size={15} />} title="WAN upload" value={up.value} unit={up.unit} period={formatPeriod(data.period)} source="Interface counters" freshness={freshnessLabel(meta)} status={traffic?.wan_upload_bytes === null || traffic?.wan_upload_bytes === undefined ? 'unknown' : 'healthy'} />
                     </div>
 
                     <section className="glass-panel dashboard-section">

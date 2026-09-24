@@ -15,6 +15,11 @@ export const UpdateSettingsSchema = z.object({
       password: z.string().optional(),
     })
     .optional(),
+  // RADIUS_SERVER_ADDRESS / RADIUS_COA_PORT KHONG nam trong env.schema.ts (Tier-0 dong bang) --
+  // giong RADIUS_SECRET_ENCRYPTION_KEY, doc thang tu process.env khi can. Ca 2 chi dung de sinh
+  // lenh RouterOS / gui goi CoA toi router, khong phai dia chi service ma backend tu goi.
+  radius_server_address: z.string().min(1).max(255).optional(),
+  radius_coa_port: z.coerce.number().int().min(1).max(65535).optional(),
   radius_auth_port: z.coerce.number().int().min(1).max(65535).optional(),
   radius_acct_port: z.coerce.number().int().min(1).max(65535).optional(),
   netflow_port: z.coerce.number().int().min(1).max(65535).optional(),

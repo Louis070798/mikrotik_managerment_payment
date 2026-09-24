@@ -12,14 +12,20 @@ export interface TokenPayload {
   name: string;
   tenant_id?: string;
   iat: number;
+  /** Han dung (epoch ms). Token khong co exp bi tu choi — xem verifyToken(). */
+  exp: number;
 }
+
+/** Han token: 12 gio. Du cho mot ca truc, du ngan de mot token bi lo khong song mai. */
+const TOKEN_TTL_MS = 12 * 60 * 60 * 1000;
 
 function base64url(input: string): string {
   return Buffer.from(input, 'utf8').toString('base64url');
 }
 
-export function signToken(payload: Omit<TokenPayload, 'iat'>, secret: string): string {
-  const full: TokenPayload = { ...payload, iat: Date.now() };
+export function signToken(payload: Omit<TokenPayload, 'iat' | 'exp'>, secret: string): string {
+  const now = Date.now();
+  const full: TokenPayload = { ...payload, iat: now, exp: now + TOKEN_TTL_MS };
   const body = base64url(JSON.stringify(full));
   const sig = createHmac('sha256', secret).update(body).digest('base64url');
   return `${body}.${sig}`;
@@ -34,7 +40,11 @@ export function verifyToken(token: string, secret: string): TokenPayload | null 
   const expectedBuf = Buffer.from(expectedSig);
   if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf)) return null;
   try {
-    return JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as TokenPayload;
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as TokenPayload;
+    // Token cu (truoc khi co exp) va token het han deu bi tu choi. Chu ky dung van khong du:
+    // khong co exp thi mot token bi lo se dung duoc vinh vien.
+    if (typeof payload.exp !== 'number' || payload.exp <= Date.now()) return null;
+    return payload;
   } catch {
     return null;
   }

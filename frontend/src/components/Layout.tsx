@@ -1,12 +1,66 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Router, Users, BarChart2, Package, Layers, Shield, Network, Building2, FileText, Anchor, Settings as SettingsIcon } from 'lucide-react';
+import {
+    LayoutDashboard, Router, Users, BarChart2, Package, Layers, Shield, Network, Building2,
+    FileText, Anchor, Settings as SettingsIcon, Radar, PanelLeft, LogOut,
+} from 'lucide-react';
 import { HeaderActionsContext } from '../lib/headerActions';
+
+type NavItem = { to: string; end?: boolean; icon: React.ReactNode; label: string; badge?: string };
+type NavGroup = { key: string; label: string; items: NavItem[] };
+
+// Giu nguyen cau truc 5 nhom cua ban top-bar cu. Khac biet: rail doc hien THANG tat ca muc,
+// khong con dropdown -- nhan nhan nhom chi la tieu de phan cach khi rail dang mo rong.
+const NAV_GROUPS: NavGroup[] = [
+    {
+        key: 'operations', label: 'Vận hành', items: [
+            { to: '/', end: true, icon: <LayoutDashboard size={18} />, label: 'Tổng quan' },
+            { to: '/devices', icon: <Router size={18} />, label: 'Router MikroTik' },
+            { to: '/ships', icon: <Anchor size={18} />, label: 'Tàu' },
+        ],
+    },
+    {
+        key: 'customers', label: 'Khách hàng', items: [
+            { to: '/users', icon: <Users size={18} />, label: 'Người dùng' },
+            { to: '/data-analysis', icon: <BarChart2 size={18} />, label: 'Phân tích dữ liệu' },
+        ],
+    },
+    {
+        key: 'infra', label: 'Gói & hạ tầng', items: [
+            { to: '/packages', icon: <Package size={18} />, label: 'Gói cước' },
+            { to: '/bulk-assign', icon: <Layers size={18} />, label: 'Gán gói hàng loạt' },
+            { to: '/radius', icon: <Shield size={18} />, label: 'RADIUS / AAA' },
+            { to: '/vpn', icon: <Network size={18} />, label: 'VPN ZeroTier' },
+        ],
+    },
+    {
+        key: 'org', label: 'Tổ chức', items: [
+            { to: '/tenants', icon: <Building2 size={18} />, label: 'Tenant & phân cấp' },
+            { to: '/billing', icon: <FileText size={18} />, label: 'Hoá đơn' },
+        ],
+    },
+    {
+        key: 'system', label: 'Hệ thống', items: [
+            { to: '/settings', icon: <SettingsIcon size={18} />, label: 'Cài đặt' },
+        ],
+    },
+];
+
+const RAIL_STORAGE_KEY = 'railExpanded';
 
 export const Layout: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
+
+    // Mac dinh THU GON (chi icon) dung nhu ban thiet ke. Nho lua chon cua nguoi dung giua cac
+    // lan mo -- try/catch vi localStorage co the bi chan (cua so an danh, chinh sach trinh duyet).
+    const [expanded, setExpanded] = useState<boolean>(() => {
+        try { return localStorage.getItem(RAIL_STORAGE_KEY) === 'true'; } catch { return false; }
+    });
+    useEffect(() => {
+        try { localStorage.setItem(RAIL_STORAGE_KEY, String(expanded)); } catch { /* bo qua */ }
+    }, [expanded]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -23,250 +77,369 @@ export const Layout: React.FC = () => {
     const actorInitials = actorName.split(/\s+/).filter(Boolean).slice(-2).map(w => w[0]).join('').toUpperCase() || '?';
 
     // Page Title based on route
+    // Moi trang chi con MOT dong ten. Bo breadcrumb "HE THONG / ..." -- rail doc ben trai da
+    // cho biet dang o nhom nao, dong chu nho do chi lap lai thong tin va day header len 2 tang.
     const getPageTitle = () => {
-        if (location.pathname === '/') return { breadcrumb: 'HỆ THỐNG / TỔNG QUAN', title: 'Trung tâm điều hành' };
-        if (location.pathname === '/areas') return { breadcrumb: 'HỆ THỐNG / TỔNG QUAN', title: 'Theo khu vực' };
-        if (location.pathname === '/ships') return { breadcrumb: 'HỆ THỐNG / TỔNG QUAN', title: 'Theo tàu' };
-        if (location.pathname === '/devices') return { breadcrumb: 'HỆ THỐNG / THIẾT BỊ', title: 'Thiết bị MikroTik' };
-        if (location.pathname.startsWith('/devices/')) return { breadcrumb: 'HỆ THỐNG / THIẾT BỊ', title: 'Chi tiết thiết bị' };
-        if (location.pathname === '/users') return { breadcrumb: 'THUÊ BAO / NGƯỜI DÙNG', title: 'Quản lý người dùng' };
-        if (location.pathname.startsWith('/users/')) return { breadcrumb: 'THUÊ BAO / NGƯỜI DÙNG', title: 'Chi tiết user' };
-        if (location.pathname === '/packages') return { breadcrumb: 'GÓI & HẠ TẦNG / GÓI CƯỚC', title: 'Gói cước' };
-        if (location.pathname === '/bulk-assign') return { breadcrumb: 'GÓI & HẠ TẦNG / GÁN GÓI', title: 'Gán gói hàng loạt' };
-        if (location.pathname === '/radius') return { breadcrumb: 'HẠ TẦNG / RADIUS', title: 'RADIUS / AAA' };
-        if (location.pathname === '/vpn') return { breadcrumb: 'HẠ TẦNG / VPN', title: 'VPN ZeroTier' };
-        if (location.pathname === '/tenants') return { breadcrumb: 'TỔ CHỨC / TENANT', title: 'Tenant & phân cấp' };
-        if (location.pathname === '/settings') return { breadcrumb: 'HỆ THỐNG / CÀI ĐẶT', title: 'Cài đặt' };
-        return { breadcrumb: 'HỆ THỐNG', title: 'Trang chủ' };
+        if (location.pathname === '/') return 'Trung tâm điều hành';
+        if (location.pathname === '/areas') return 'Theo khu vực';
+        if (location.pathname === '/ships') return 'Theo tàu';
+        if (location.pathname === '/devices') return 'Router MikroTik';
+        // Trang chi tiet tu hien ten thiet bi lam h1 -- de trong de header khong lap lai.
+        if (location.pathname.startsWith('/devices/')) return '';
+        if (location.pathname === '/users') return 'Quản lý người dùng';
+        if (location.pathname.startsWith('/users/')) return 'Chi tiết user';
+        if (location.pathname === '/packages') return 'Gói cước';
+        if (location.pathname === '/bulk-assign') return 'Gán gói hàng loạt';
+        if (location.pathname === '/radius') return 'RADIUS / AAA';
+        if (location.pathname === '/vpn') return 'VPN ZeroTier';
+        if (location.pathname === '/data-analysis') return 'Phân tích dữ liệu';
+        if (location.pathname === '/billing') return 'Hoá đơn';
+        if (location.pathname === '/tenants') return 'Tenant & phân cấp';
+        if (location.pathname === '/settings') return 'Cài đặt';
+        return 'Trang chủ';
     };
 
-    const { breadcrumb, title } = getPageTitle();
+    const title = getPageTitle();
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: '#f0f2f5', fontFamily: '"Inter", sans-serif' }}>
-            {/* Sidebar */}
-            <aside style={{ width: '250px', background: '#1c242c', color: '#8a99a8', display: 'flex', flexDirection: 'column', height: '100vh', position: 'fixed', left: 0, top: 0, zIndex: 100 }}>
-                {/* Logo Area */}
-                <div style={{ display: 'flex', alignItems: 'center', padding: '20px 24px', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ background: '#009688', color: '#fff', fontWeight: 'bold', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', fontSize: '14px' }}>
-                        RB
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ color: '#fff', fontWeight: 'bold', fontSize: '15px', lineHeight: '1.2' }}>RouterBridge</span>
-                        <span style={{ fontSize: '10px', letterSpacing: '0.05em', color: '#8a99a8' }}>NOC CONSOLE</span>
-                    </div>
-                </div>
+        <div className={`app-shell ${expanded ? 'rail-open' : ''}`}>
 
-                {/* Nav Links */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-
-                    {/* VẬN HÀNH */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#5b6b7a', paddingLeft: '8px', letterSpacing: '0.1em' }}>Vận hành</div>
-                        <NavLink to="/" end className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={navItemStyle}>
-                            <LayoutDashboard size={18} />
-                            <span>Tổng quan</span>
-                        </NavLink>
-                        <NavLink to="/devices" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <Router size={18} />
-                            <span style={{ flex: 1 }}>Thiết bị MikroTik</span>
-                            <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', fontSize: '12px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>2</span>
-                        </NavLink>
-                        <NavLink to="/ships" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <Anchor size={18} />
-                            <span>Tàu</span>
-                        </NavLink>
-                    </div>
-
-                    {/* KHÁCH HÀNG */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#5b6b7a', paddingLeft: '8px', letterSpacing: '0.1em' }}>Khách hàng</div>
-                        <NavLink to="/users" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <Users size={18} />
-                            <span>Người dùng</span>
-                        </NavLink>
-                        <NavLink to="/data-analysis" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <BarChart2 size={18} />
-                            <span>Phân tích dữ liệu</span>
-                        </NavLink>
-                    </div>
-
-                    {/* GÓI & HẠ TẦNG */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#5b6b7a', paddingLeft: '8px', letterSpacing: '0.1em' }}>Gói & hạ tầng</div>
-                        <NavLink to="/packages" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <Package size={18} />
-                            <span>Gói cước</span>
-                        </NavLink>
-                        <NavLink to="/bulk-assign" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <Layers size={18} />
-                            <span>Gán gói hàng loạt</span>
-                        </NavLink>
-                        <NavLink to="/radius" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <Shield size={18} />
-                            <span>RADIUS / AAA</span>
-                        </NavLink>
-                        <NavLink to="/vpn" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <Network size={18} />
-                            <span>VPN ZeroTier</span>
-                        </NavLink>
-                    </div>
-
-                    {/* TỔ CHỨC */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#5b6b7a', paddingLeft: '8px', letterSpacing: '0.1em' }}>Tổ chức</div>
-                        <NavLink to="/tenants" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <Building2 size={18} />
-                            <span>Tenant & phân cấp</span>
-                        </NavLink>
-                        <NavLink to="/billing" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <FileText size={18} />
-                            <span>Hoá đơn</span>
-                        </NavLink>
-                    </div>
-
-                    {/* HỆ THỐNG */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#5b6b7a', paddingLeft: '8px', letterSpacing: '0.1em' }}>Hệ thống</div>
-                        <NavLink to="/settings" className={({ isActive }) => `nav-item-custom ${isActive ? 'active' : ''}`} style={({ isActive }) => ({ ...navItemStyle, ...(isActive ? activeStyle : {}) })}>
-                            <SettingsIcon size={18} />
-                            <span>Cài đặt</span>
-                        </NavLink>
+            {/* Rail dieu huong doc — thay cho top-bar HUD cu. Khong con dropdown, khong con do
+                be rong bang JS: moi muc hien thang, nen bo duoc toan bo ResizeObserver/
+                getBoundingClientRect cua ban truoc. */}
+            <nav className="rail" role="navigation" aria-label="Điều hướng chính">
+                <div className="rail-brand">
+                    <div className="rail-brand-mark" aria-hidden="true">RB</div>
+                    <div className="rail-brand-text">
+                        <span className="rail-brand-name">RouterBridge</span>
+                        <span className="rail-brand-sub">NOC CONSOLE</span>
                     </div>
                 </div>
 
-                {/* Sidebar Footer */}
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '16px' }}>
-                    <div style={{ background: '#252f38', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#8a99a8' }}>ROUTEROS API</span>
-                            <div className="status-live-dot" />
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#a0aec0' }}>
-                            Poller 15s - 7/8 kết nối
-                        </div>
-                    </div>
+                <button
+                    type="button"
+                    className="rail-toggle"
+                    onClick={() => setExpanded(v => !v)}
+                    title={expanded ? 'Thu gọn thanh điều hướng' : 'Mở rộng thanh điều hướng'}
+                    aria-label={expanded ? 'Thu gọn thanh điều hướng' : 'Mở rộng thanh điều hướng'}
+                    aria-expanded={expanded}
+                >
+                    <PanelLeft size={16} />
+                    <span className="rail-label">Thu gọn</span>
+                </button>
 
-                    <div className="sidebar-avatar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={handleLogout} title="Logout">
-                        <div className="sidebar-avatar" style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '14px', fontWeight: 'bold' }}>
-                            {actorInitials}
+                <div className="rail-scroll">
+                    {NAV_GROUPS.map(group => (
+                        <div key={group.key} className="rail-group">
+                            <div className="rail-group-label">{group.label}</div>
+                            {group.items.map(item => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    end={item.end}
+                                    className={({ isActive }) => `rail-item ${isActive ? 'active' : ''}`}
+                                    // title = tooltip cua trinh duyet, la cach duy nhat biet muc nao la
+                                    // gi khi rail dang thu gon chi con icon.
+                                    title={item.label}
+                                >
+                                    <span className="rail-icon">{item.icon}</span>
+                                    <span className="rail-label">{item.label}</span>
+                                    {item.badge && <span className="rail-badge">{item.badge}</span>}
+                                </NavLink>
+                            ))}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ color: '#fff', fontSize: '14px', fontWeight: '500' }}>{actorName}</span>
-                            <span style={{ color: '#8a99a8', fontSize: '12px' }}>{actorRole}</span>
-                        </div>
-                    </div>
+                    ))}
                 </div>
-            </aside>
 
-            {/* Main Wrapper */}
-            <div style={{ flex: 1, marginLeft: '250px', display: 'flex', flexDirection: 'column', height: '100vh' }}>
+                <button type="button" className="rail-actor" onClick={handleLogout} title={`Đăng xuất ${actorName}`}>
+                    <span className="rail-avatar">{actorInitials}</span>
+                    <span className="rail-actor-meta">
+                        <span className="rail-actor-name">{actorName}</span>
+                        <span className="rail-actor-role">{actorRole}</span>
+                    </span>
+                    <LogOut size={15} className="rail-logout-icon" />
+                </button>
+            </nav>
 
-                {/* Header Navbar */}
-                <header style={{
-                    height: '64px',
-                    background: '#fff',
-                    borderBottom: '1px solid #e2e8f0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0 24px',
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 10
-                }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', letterSpacing: '0.05em' }}>
-                            {breadcrumb}
+            {/* Cot noi dung */}
+            <div className="app-main">
+                <header className="page-header">
+                    {title ? (
+                        <div className="page-header-titles">
+                            <h1 className="page-title">{title}</h1>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                            <span style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>{title}</span>
+                    ) : <div />}
+                    <div className="page-header-right">
+                        <div className="poller-pill" title="Trạng thái poller RouterOS API">
+                            <Radar size={13} className="poller-icon" />
+                            <span>Poller 15s · 7/8 kết nối</span>
                         </div>
+                        {headerActions}
                     </div>
-
-                    {headerActions}
                 </header>
 
-                {/* Main Content Area */}
-                <main style={{ flex: 1, overflowY: 'auto', padding: '24px', background: '#f8fafc' }}>
+                <main className="page-body">
                     <HeaderActionsContext.Provider value={setHeaderActions}>
                         <Outlet />
                     </HeaderActionsContext.Provider>
                 </main>
             </div>
 
-            {/* Custom styles injected for active class since inline active is complex in NavLink */}
             <style dangerouslySetInnerHTML={{
                 __html: `
-                .nav-item-custom {
+                .app-shell {
+                    display: flex;
+                    gap: 16px;
+                    padding: 16px;
+                    min-height: 100vh;
+                    background: var(--bg-color);
+                    font-family: 'Inter', system-ui, sans-serif;
+                }
+
+                /* ---- Rail ---- */
+                .rail {
+                    width: 76px;
+                    flex: none;
+                    align-self: flex-start;
+                    position: sticky;
+                    top: 16px;
+                    max-height: calc(100vh - 32px);
+                    border-radius: 24px;
+                    background: linear-gradient(180deg, #2a6f97 0%, #0d3352 100%);
+                    box-shadow: 0 8px 24px -12px rgba(9, 38, 61, 0.5);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: stretch;
+                    padding: 16px 12px 14px;
+                    gap: 8px;
+                    transition: width 0.22s ease;
+                    overflow: hidden;
+                }
+                .rail-open .rail { width: 244px; }
+
+                .rail-brand {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 0 2px 2px;
+                    min-height: 40px;
+                }
+                .rail-brand-mark {
+                    width: 40px;
+                    height: 40px;
+                    flex: none;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255, 255, 255, 0.14);
+                    color: #bae6fd;
+                    font-weight: 700;
+                    font-size: 13px;
+                    letter-spacing: 0.04em;
+                }
+                .rail-brand-text { display: none; flex-direction: column; line-height: 1.2; min-width: 0; }
+                .rail-open .rail-brand-text { display: flex; }
+                .rail-brand-name { color: #f8fafc; font-weight: 700; font-size: 14px; white-space: nowrap; }
+                .rail-brand-sub { color: #7fb2d4; font-size: 9px; letter-spacing: 0.14em; white-space: nowrap; }
+
+                .rail-toggle {
                     display: flex;
                     align-items: center;
                     gap: 12px;
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    color: #8a99a8;
+                    width: 100%;
+                    min-height: 36px;
+                    padding: 8px 13px;
+                    background: transparent;
+                    border: none;
+                    border-radius: 12px;
+                    color: #9fcde8;
+                    font-family: inherit;
+                    font-size: 13px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: background 0.15s ease, color 0.15s ease;
+                }
+                .rail-toggle:hover { background: rgba(255, 255, 255, 0.08); color: #f8fafc; }
+                .rail-toggle svg { flex: none; }
+
+                /* Danh sach muc — cuon rieng khi man hinh thap, khong lam ca rail dai ra */
+                .rail-scroll {
+                    flex: 1;
+                    min-height: 0;
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+                }
+                .rail-scroll::-webkit-scrollbar { width: 4px; }
+                .rail-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 2px; }
+
+                .rail-group { display: flex; flex-direction: column; gap: 2px; }
+                /* Khi thu gon, nhan nhom thanh 1 duong ke mong — van con dau hieu phan nhom */
+                .rail-group + .rail-group { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.09); }
+                .rail-group-label {
+                    display: none;
+                    font-size: 10px;
+                    font-weight: 700;
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
+                    color: #7fb2d4;
+                    padding: 8px 13px 4px;
+                    white-space: nowrap;
+                }
+                .rail-open .rail-group-label { display: block; }
+                .rail-open .rail-group + .rail-group { border-top: none; padding-top: 0; margin-top: 2px; }
+
+                .rail-item {
+                    position: relative;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    /* 44px — nguong hit target toi thieu, giu nguyen ca khi thu gon */
+                    min-height: 44px;
+                    padding: 0 13px;
+                    border-radius: 12px;
+                    color: #9fcde8;
+                    font-size: 13.5px;
+                    font-weight: 500;
                     text-decoration: none;
-                    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s, color 0.2s, border-color 0.2s;
-                    font-size: 14px;
-                    border: 1px solid transparent;
+                    white-space: nowrap;
+                    transition: background 0.15s ease, color 0.15s ease;
                 }
-                .nav-item-custom svg {
-                    transition: transform 0.2s ease;
-                    flex-shrink: 0;
-                }
-                .nav-item-custom:hover {
-                    background: rgba(255,255,255,0.05);
+                .rail-item:hover { background: rgba(255, 255, 255, 0.08); color: #f8fafc; }
+                .rail-item.active { background: #38bdf8; color: #0c3b5e; font-weight: 600; }
+                .rail-item.active:hover { background: #38bdf8; color: #0c3b5e; }
+                .rail-item:focus-visible { outline: 2px solid #7dd3fc; outline-offset: 2px; }
+
+                /* Thu gon: can giua icon trong o 52px. Mo rong: tra ve le trai co padding.
+                   Do uu tien 0,1,0 -> 0,2,0 de quy tac mo rong thang. */
+                .rail-item, .rail-toggle { justify-content: center; padding: 0; }
+                .rail-brand { justify-content: center; }
+                .rail-open .rail-item, .rail-open .rail-toggle { justify-content: flex-start; padding: 0 13px; }
+                .rail-open .rail-brand { justify-content: flex-start; }
+                .rail-icon { display: inline-flex; align-items: center; justify-content: center; width: 18px; flex: none; }
+
+                .rail-label { display: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+                .rail-open .rail-label { display: block; }
+
+                .rail-badge {
+                    flex: none;
+                    min-width: 18px;
+                    height: 18px;
+                    padding: 0 5px;
+                    border-radius: 999px;
+                    background: #ef4444;
                     color: #fff;
-                    transform: translateX(3px);
+                    font-size: 10.5px;
+                    font-weight: 700;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
                 }
-                .nav-item-custom:hover svg {
-                    transform: scale(1.12);
-                }
-                .nav-item-custom.active {
-                    background: rgba(0, 150, 136, 0.1);
-                    color: #009688;
-                    border: 1px solid #009688;
-                }
+                /* Khi thu gon, badge nam de len goc icon; khi mo rong thi ve cuoi hang.
+                   Do uu tien phai tang dan: 0,2,0 -> 0,3,0, neu khong quy tac "mo rong"
+                   se khong bao gio thang. */
+                .rail-item .rail-badge { position: absolute; top: 7px; right: 9px; }
+                .rail-open .rail-item .rail-badge { position: static; }
 
-                /* Chấm "đang sống" cạnh ROUTEROS API -- vòng sáng lan toả nhẹ, kiểu "live indicator"
-                   phổ biến trên uiverse.io (tags/animation), báo hiệu poller vẫn đang chạy chứ
-                   không phải 1 chấm tĩnh vô nghĩa. */
-                .status-live-dot {
-                    width: 6px;
-                    height: 6px;
-                    background: #10b981;
+                .rail-actor {
+                    display: flex;
+                    align-items: center;
+                    gap: 11px;
+                    width: 100%;
+                    padding: 7px 8px;
+                    margin-top: 4px;
+                    background: transparent;
+                    border: none;
+                    border-radius: 14px;
+                    cursor: pointer;
+                    font-family: inherit;
+                    text-align: left;
+                    transition: background 0.15s ease;
+                }
+                .rail-actor:hover { background: rgba(255, 255, 255, 0.08); }
+                .rail-avatar {
+                    width: 36px;
+                    height: 36px;
+                    flex: none;
                     border-radius: 50%;
-                    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55);
-                    animation: statusLivePulse 2s ease-out infinite;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: #7dd3fc;
+                    color: #0c3b5e;
+                    font-size: 12.5px;
+                    font-weight: 700;
                 }
-                @keyframes statusLivePulse {
-                    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55); }
-                    70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-                    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
-                }
+                .rail-actor-meta { display: none; flex-direction: column; line-height: 1.25; min-width: 0; flex: 1; }
+                .rail-open .rail-actor-meta { display: flex; }
+                .rail-actor-name { color: #f8fafc; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                .rail-actor-role { color: #7fb2d4; font-size: 11px; text-transform: capitalize; }
+                .rail-logout-icon { display: none; flex: none; color: #9fcde8; }
+                .rail-open .rail-logout-icon { display: block; }
 
-                /* Avatar logout -- trước đây cursor:pointer nhưng KHÔNG có phản hồi hover nào, người
-                   dùng không biết đây là nút bấm được. Thêm viền sáng + nhích nhẹ khi hover/bấm. */
-                .sidebar-avatar {
-                    transition: box-shadow 0.2s ease, transform 0.15s ease;
+                /* ---- Cot noi dung ---- */
+                .app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+                .page-header {
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: space-between;
+                    gap: 16px;
+                    flex-wrap: wrap;
+                    padding: 6px 4px 0;
                 }
-                .sidebar-avatar-row:hover .sidebar-avatar {
-                    box-shadow: 0 0 0 3px rgba(0, 150, 136, 0.35);
-                    transform: scale(1.05);
+                .page-header-titles { min-width: 0; }
+                .page-title {
+                    font-size: 23px;
+                    font-weight: 700;
+                    color: var(--text-heading);
+                    margin: 0;
+                    letter-spacing: -0.015em;
                 }
-                .sidebar-avatar-row:active .sidebar-avatar {
-                    transform: scale(0.96);
+                .page-header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+                .poller-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 6px 12px;
+                    border-radius: 999px;
+                    background: rgba(16, 185, 129, 0.1);
+                    border: 1px solid rgba(16, 185, 129, 0.35);
+                    color: #15803d;
+                    font-size: 11.5px;
+                    white-space: nowrap;
+                }
+                .poller-icon { animation: railRadarSpin 3s linear infinite; }
+                @keyframes railRadarSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+                .page-body { min-height: 0; }
+
+                /* Duoi 900px luon giu rail thu gon — 244px an mat qua nhieu chieu ngang */
+                @media (max-width: 900px) {
+                    .rail-open .rail { width: 76px; }
+                    .rail-open .rail-brand-text,
+                    .rail-open .rail-label,
+                    .rail-open .rail-group-label,
+                    .rail-open .rail-actor-meta,
+                    .rail-open .rail-logout-icon { display: none; }
+                    .rail-open .rail-item .rail-badge { position: absolute; top: 7px; right: 9px; }
+                    .rail-open .rail-item, .rail-open .rail-toggle { justify-content: center; padding: 0; }
+                    .rail-open .rail-brand { justify-content: center; }
+                    .app-shell { padding: 12px; gap: 12px; }
                 }
 
                 @media (prefers-reduced-motion: reduce) {
-                    .status-live-dot { animation: none; }
-                    .nav-item-custom, .nav-item-custom svg, .sidebar-avatar { transition: none; }
+                    .poller-icon { animation: none; }
+                    .rail, .rail-item, .rail-toggle, .rail-actor { transition: none; }
                 }
-            `}} />
+                `
+            }} />
         </div>
     );
 };
-
-const navItemStyle = {};
-const activeStyle = {};
-

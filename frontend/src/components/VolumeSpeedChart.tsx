@@ -23,13 +23,22 @@ type Props = {
  * Không tự vẽ gì nếu không có điểm nào (points rỗng) — tránh 1 khung biểu đồ trống vô nghĩa.
  */
 export const VolumeSpeedChart: React.FC<Props> = ({ points, granularity, compactTimeLabel }) => {
+    // Bucket 1 ngay thi nhan truc phai la ngay/thang -- kem gio se doc nham thanh bucket theo gio.
+    const timeFormat = useMemo<Intl.DateTimeFormatOptions>(() => (
+        granularity === '1d'
+            ? { day: '2-digit', month: '2-digit' }
+            : compactTimeLabel
+                ? { hour: '2-digit', minute: '2-digit' }
+                : { day: '2-digit', month: '2-digit', hour: '2-digit' }
+    ), [granularity, compactTimeLabel]);
+
     const rows = useMemo(() => points.map(p => ({
-        time: p.bucket ? new Date(p.bucket).toLocaleString('vi-VN', compactTimeLabel ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', hour: '2-digit' }) : '',
+        time: p.bucket ? new Date(p.bucket).toLocaleString('vi-VN', timeFormat) : '',
         download_bytes: p.download_bytes ?? 0,
         upload_bytes: p.upload_bytes ?? 0,
         download_mbps: (bytesToRateBps(p.download_bytes ?? 0, granularity) ?? 0) / 1_000_000,
         upload_mbps: (bytesToRateBps(p.upload_bytes ?? 0, granularity) ?? 0) / 1_000_000,
-    })), [points, granularity, compactTimeLabel]);
+    })), [points, granularity, timeFormat]);
 
     const unit = useMemo(() => pickByteUnit(Math.max(1, ...rows.map(r => r.download_bytes + r.upload_bytes))), [rows]);
     const volumeRows = useMemo(() => rows.map(r => ({ ...r, download_scaled: r.download_bytes / unit.divisor, upload_scaled: r.upload_bytes / unit.divisor })), [rows, unit]);
@@ -39,7 +48,7 @@ export const VolumeSpeedChart: React.FC<Props> = ({ points, granularity, compact
     return (
         <div style={{ display: 'grid', gap: 22 }}>
             <div>
-                <div className="eyebrow" style={{ marginBottom: 6 }}>Lượng data tiêu thụ theo thời gian ({unit.label} / bucket)</div>
+                <div className="eyebrow" style={{ marginBottom: 6 }}>Lượng data tiêu thụ theo thời gian ({unit.label} / {granularity === '1d' ? 'ngày' : 'bucket'})</div>
                 <div style={{ width: '100%', height: 220 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={volumeRows}>
@@ -48,8 +57,8 @@ export const VolumeSpeedChart: React.FC<Props> = ({ points, granularity, compact
                             <YAxis fontSize={11} unit={` ${unit.label}`} />
                             <Tooltip formatter={(v) => `${Number(v ?? 0).toFixed(2)} ${unit.label}`} />
                             <Legend />
-                            <Bar dataKey="download_scaled" name="Download" stackId="volume" fill="#009688" />
-                            <Bar dataKey="upload_scaled" name="Upload" stackId="volume" fill="#3b82f6" />
+                            <Bar dataKey="download_scaled" name="Download" stackId="volume" fill="#146ca8" />
+                            <Bar dataKey="upload_scaled" name="Upload" stackId="volume" fill="#00a0a6" />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
@@ -64,8 +73,8 @@ export const VolumeSpeedChart: React.FC<Props> = ({ points, granularity, compact
                             <YAxis fontSize={11} unit=" Mbps" />
                             <Tooltip formatter={(v) => `${Number(v ?? 0).toFixed(2)} Mbps`} />
                             <Legend />
-                            <Line type="monotone" dataKey="download_mbps" name="Download" stroke="#009688" strokeWidth={2} dot={false} />
-                            <Line type="monotone" dataKey="upload_mbps" name="Upload" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="download_mbps" name="Download" stroke="#146ca8" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="upload_mbps" name="Upload" stroke="#00a0a6" strokeWidth={2} dot={false} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>

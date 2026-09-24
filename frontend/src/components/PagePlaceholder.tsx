@@ -27,7 +27,7 @@ export const PagePlaceholder = ({ title, description }: { title: string, descrip
                     justifyContent: 'center',
                     marginBottom: '8px'
                 }}>
-                    <Hammer size={32} color="#3b82f6" />
+                    <Hammer size={32} color="#146ca8" />
                 </div>
 
                 <h2 style={{ color: '#0f172a', margin: 0, fontSize: '24px', fontWeight: 'bold' }}>{title}</h2>

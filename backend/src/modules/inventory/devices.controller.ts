@@ -1,9 +1,9 @@
 import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
-import { RequirePermission } from '@auth-stub/auth-stub.guard';
+import { RequirePermission, TenantScoped } from '@auth-stub/auth-stub.guard';
 import { zodBody } from '@common/zod-validation.pipe';
 import { DashboardQuerySchema } from '../dashboard/dto';
 import { DevicesService } from './devices.service';
-import { CreateDeviceSchema, DeviceTelemetryPushSchema, ListDevicesQuerySchema, UpdateDeviceSchema } from './dto';
+import { CreateDeviceSchema, DeviceTelemetryPushSchema, ListDevicesQuerySchema, SetDevicePushKeySchema, SetDeviceRadiusSecretSchema, UpdateDeviceSchema } from './dto';
 
 @Controller('devices')
 export class DevicesController {
@@ -11,6 +11,7 @@ export class DevicesController {
 
   @Get()
   @RequirePermission('inventory:read')
+  @TenantScoped()
   list(@Query() query: Record<string, string>) {
     const parsed = ListDevicesQuerySchema.parse(query);
     return this.service.list({ shipId: parsed.ship_id, role: parsed.role, status: parsed.status });
@@ -18,6 +19,7 @@ export class DevicesController {
 
   @Get(':deviceId')
   @RequirePermission('inventory:read')
+  @TenantScoped()
   getOne(@Param('deviceId') deviceId: string) {
     return this.service.getById(deviceId);
   }
@@ -57,8 +59,11 @@ export class DevicesController {
 
   @Post(':deviceId/push-key')
   @RequirePermission('inventory:write')
-  issuePushApiKey(@Param('deviceId') deviceId: string) {
-    return this.service.issuePushApiKey(deviceId);
+  setPushApiKey(
+    @Param('deviceId') deviceId: string,
+    @Body(zodBody(SetDevicePushKeySchema)) body: ReturnType<typeof SetDevicePushKeySchema['parse']>,
+  ) {
+    return this.service.setPushApiKey(deviceId, body.api_key);
   }
 
   @Delete(':deviceId/push-key')
@@ -68,10 +73,21 @@ export class DevicesController {
     await this.service.revokePushApiKey(deviceId);
   }
 
+  // Doc lai secret that de dan vao MikroTik. Dat @RequirePermission('inventory:write') chu KHONG
+  // phai 'inventory:read': doc mot secret nhay cam it nhat cung ngang voi quyen ghi no.
+  @Get(':deviceId/radius-secret')
+  @RequirePermission('inventory:write')
+  getRadiusSecret(@Param('deviceId') deviceId: string) {
+    return this.service.getRadiusSecret(deviceId);
+  }
+
   @Post(':deviceId/radius-secret')
   @RequirePermission('inventory:write')
-  issueRadiusSecret(@Param('deviceId') deviceId: string) {
-    return this.service.issueRadiusSecret(deviceId);
+  setRadiusSecret(
+    @Param('deviceId') deviceId: string,
+    @Body(zodBody(SetDeviceRadiusSecretSchema)) body: ReturnType<typeof SetDeviceRadiusSecretSchema['parse']>,
+  ) {
+    return this.service.setRadiusSecret(deviceId, body.secret);
   }
 
   @Delete(':deviceId/radius-secret')

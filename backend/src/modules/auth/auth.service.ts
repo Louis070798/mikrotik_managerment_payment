@@ -1,28 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { DB_TOKEN, DbClient } from '@db/db.module';
-import { tenants } from '@db/schema';
+import { adminUsers, tenants } from '@db/schema';
 import { ApiException } from '@common/api-exception';
 import { verifyPassword } from '@password-hash/password-hash';
 import { EnvSecretStore } from '@secrets/env-secret-store';
 import { signToken, verifyToken, TokenPayload } from '@auth-stub/token';
+import { TENANT_PERMISSIONS } from '@auth-stub/permissions';
 
-/**
- * Whitelist THU CONG cho tai khoan "tenant" that (khac "admin" — luon la '*'). Loai tru cac
- * quyen ha tang/to chuc: settings:*, endpoint:* (Cai dat — chi Superadmin), inventory:write
- * (cau truc ham doi), package:write (gia goi cuoc), tenant:write (tao/sua tenant khac — tranh
- * leo thang quyen qua chinh co che nay), zerotier:write, audit:read (log toan he thong).
- *
- * GIOI HAN THAT (chua giai quyet o buoc nay): day la 1 danh sach quyen CHUNG, chua phai scope
- * theo TUNG tenant — 1 tenant dang nhap voi subscriber:read van thay duoc subscriber cua MOI
- * tenant khac, khong chi cua minh (chua co loc tenant_id trong tung service). Can 1 buoc rieng
- * (loc du lieu theo request.actor.tenant_id trong moi service) de that su cach ly du lieu.
- */
-const TENANT_PERMISSIONS = [
-  'alert:ack', 'alert:read', 'business:read', 'crew:read', 'crew:write', 'dashboard:read',
-  'finance:read', 'health:read', 'inventory:read', 'package:read', 'raw:read',
-  'reconciliation:read', 'subscriber:read', 'subscriber:write', 'tenant:read',
-].join(',');
+// Bang quyen chuyen sang @auth-stub/permissions.ts de guard va service dung CHUNG mot nguon.
 
 @Injectable()
 export class AuthService {
@@ -36,6 +22,30 @@ export class AuthService {
   }
 
   async login(username: string, password: string) {
+    // 1) Tai khoan quan tri THAT trong database (bang admin_users, migration 0015). Day la nguon
+    //    chinh — tra truoc bien moi truong, de khi da co tai khoan that thi no quyet dinh.
+    const admin = username
+      ? await this.db.query.adminUsers.findFirst({
+          where: and(eq(adminUsers.username, username), isNull(adminUsers.deletedAt)),
+        })
+      : undefined;
+
+    if (admin) {
+      if (admin.status !== 'ACTIVE') {
+        throw new ApiException('UNAUTHENTICATED', 'Tài khoản đã bị khoá.');
+      }
+      if (!verifyPassword(password ?? '', admin.passwordHash)) {
+        // KHONG rot xuong cac nhanh duoi. Username nay la mot admin that; sai mat khau thi dung
+        // han o day, neu khong mot lan go nham lai di tiep sang nhanh du phong.
+        throw new ApiException('UNAUTHENTICATED', 'Sai username hoặc mật khẩu.');
+      }
+      await this.db.update(adminUsers).set({ lastLoginAt: new Date() }).where(eq(adminUsers.id, admin.id));
+      const token = signToken({ sub: admin.id, role: 'admin', name: admin.name }, this.getSecret());
+      return { token, id: admin.id, name: admin.name, role: 'admin', permissions: '*' };
+    }
+
+    // 2) Duong vao du phong bang bien moi truong — chi de tao duoc tai khoan dau tien khi
+    //    admin_users con rong. Xem scripts/create-admin.ts.
     const superadminUsername = this.envStore.get('SUPERADMIN_USERNAME');
     const superadminHash = this.envStore.get('SUPERADMIN_PASSWORD_HASH');
     const hasRealSuperadmin = !!superadminUsername && !!superadminHash;
@@ -69,11 +79,25 @@ export class AuthService {
       throw new ApiException('UNAUTHENTICATED', 'Sai username hoặc mật khẩu.');
     }
 
-    // Fallback CHI khi CHUA TUNG cau hinh superadmin that nao -- giu dung hanh vi dev cu (chap
-    // nhan bat ky username/password nao, vai tro admin) de khong khoa het moi nguoi ra ngoai
-    // truoc khi ho kip tao tai khoan that dau tien.
-    const token = signToken({ sub: 'dev-actor', role: 'admin', name: 'Dev Actor' }, this.getSecret());
-    return { token, id: 'dev-actor', name: 'Dev Actor', role: 'admin', permissions: '*' };
+    // FAIL CLOSED. Ban truoc: khi chua cau hinh superadmin thi BAT KY username/password nao cung
+    // duoc cap token admin toan quyen -- mot he thong vua cai dat la mo toang cho toi khi co nguoi
+    // nho sua .env, va khong co gi bao cho ho biet dieu do.
+    //
+    // Thong bao phan biet 2 tinh huong khac han nhau, vi truoc day gop lam mot la noi sai voi
+    // nguoi dung: he thong DA co tai khoan ma bao "chua cau hinh tai khoan quan tri" thi ho se di
+    // sua .env thay vi kiem tra lai username minh vua go.
+    const [{ count: adminCount }] = await this.db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(adminUsers)
+      .where(and(isNull(adminUsers.deletedAt), eq(adminUsers.status, 'ACTIVE')));
+
+    if (adminCount > 0) {
+      throw new ApiException('UNAUTHENTICATED', 'Sai username hoặc mật khẩu.');
+    }
+    throw new ApiException(
+      'UNAUTHENTICATED',
+      'Chưa có tài khoản quản trị nào. Chạy: npm run admin:create -- --username=<tên> --name="<họ tên>"',
+    );
   }
 
   me(bearerToken?: string) {
@@ -81,10 +105,10 @@ export class AuthService {
     if (decoded?.role === 'tenant') {
       return { id: decoded.tenant_id ?? decoded.sub, name: decoded.name, role: 'tenant' };
     }
-    // Token that (superadmin) giai ma duoc -> tra dung danh tinh do; khong co token/khong giai ma
-    // duoc (chua dang nhap qua UI, vd goi API truc tiep) -> fallback "Dev Actor" nhu cu.
     if (decoded?.role === 'admin') return { id: decoded.sub, name: decoded.name, role: 'admin' };
-    return { id: 'dev-actor', name: 'Dev Actor', role: 'admin' };
+    // Khong con bia ra danh tinh "Dev Actor" vai tro admin khi thieu token. Tra ve danh tinh admin
+    // cho mot request chua xac thuc la noi doi voi chinh giao dien, va che mat loi token het han.
+    throw new ApiException('UNAUTHENTICATED', 'Chưa đăng nhập hoặc token đã hết hạn.');
   }
 
   private tryVerify(token: string): TokenPayload | null {

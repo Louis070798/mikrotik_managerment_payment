@@ -41,5 +41,5 @@ test('HA warning exposes failed-over RADIUS and missing backup compliance', asyn
 });
 
 test('null bytes stay unavailable instead of becoming zero', () => {
-    expect(formatBytes(null)).toEqual({ value: 'Not available', unit: '' });
+    expect(formatBytes(null)).toEqual({ value: 'Chưa có dữ liệu', unit: '' });
 });

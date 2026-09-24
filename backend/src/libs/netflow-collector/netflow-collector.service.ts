@@ -5,6 +5,7 @@ import type { Env } from '@config/env.schema';
 import { CollectorTarget } from '@collectors/collector.types';
 import { IpfixFlowReading, ipfixReadingToEvent } from '@collectors/ipfix-flow.collector';
 import { InventoryCacheService } from '@inventory-cache/inventory-cache.service';
+import { IngestConcurrencyLimiterService } from '@ingest-throttle/ingest-concurrency-limiter.service';
 import { TelemetryService } from '../../modules/telemetry/telemetry.service';
 import { isPrivateIp } from './ip-utils';
 import { decodeFieldValue, NETFLOW_FIELD } from './netflow-fields';
@@ -44,12 +45,15 @@ export class NetflowCollectorService implements OnModuleInit, OnModuleDestroy {
     @Inject(ENV_TOKEN) private readonly env: Env,
     private readonly telemetry: TelemetryService,
     private readonly inventoryCache: InventoryCacheService,
+    private readonly ingestLimiter: IngestConcurrencyLimiterService,
   ) {}
 
   onModuleInit() {
     const socket = dgram.createSocket('udp4');
     socket.on('message', (msg, rinfo) => {
-      this.handlePacket(msg, rinfo).catch((err) => this.logger.error(`Unhandled error processing NetFlow packet from ${rinfo.address}: ${(err as Error).message}`));
+      // Qua limiter dung chung voi RADIUS (xem ingest-throttle) -- khong ghim thang connection pool
+      // khi ca 2 tau cung burst NetFlow lien tuc.
+      this.ingestLimiter.run(() => this.handlePacket(msg, rinfo)).catch((err) => this.logger.error(`Unhandled error processing NetFlow packet from ${rinfo.address}: ${(err as Error).message}`));
     });
     socket.on('error', (err) => this.logger.error(`NetFlow UDP socket error: ${err.message}`));
     socket.bind(this.env.NETFLOW_PORT, () => {

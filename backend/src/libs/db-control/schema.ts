@@ -133,10 +133,13 @@ export const actorTypeEnum = pgEnum('actor_type', ['USER', 'SYSTEM', 'JOB', 'API
 
 export const auditResultEnum = pgEnum('audit_result', ['SUCCESS', 'FAILURE', 'DENIED']);
 
-// Tenant / gói cước / subscriber (PPPoE/Hotspot) — xem docs/backend/02-DATABASE_DESIGN.md §1.6.
+// Tenant / gói cước / subscriber (Hotspot) — xem docs/backend/02-DATABASE_DESIGN.md §1.6.
 // Phase 1: CRUD control-DB thật. Cấp phát tài khoản RADIUS thật (radcheck trong PostgreSQL AAA)
 // là Phase 2 — chưa nối, xem subscribers.service.ts.
 export const packageDurationUnitEnum = pgEnum('package_duration_unit', ['DAY', 'MONTH']);
+// Trien khai hien tai CHI dung HOTSPOT. PPPOE giu lai trong enum de khong pha du lieu/migration da
+// co, nhung khong phai mac dinh o UI va khong co nhanh xu ly rieng nao trong RADIUS Access-Request
+// (radius-server.service.ts tra subscriber theo (nas_device_id, username), khong doc auth_type).
 export const subscriberAuthTypeEnum = pgEnum('subscriber_auth_type', ['PPPOE', 'HOTSPOT']);
 export const subscriberStatusEnum = pgEnum('subscriber_status', ['ACTIVE', 'SUSPENDED', 'EXPIRED']);
 
@@ -707,6 +710,34 @@ export const auditLogs = pgTable(
 // Tenant / gói cước / subscriber — docs/backend/02-DATABASE_DESIGN.md §1.6.
 // Phase 1 (control DB thật). RADIUS provisioning thật là Phase 2.
 // ---------------------------------------------------------------------------
+
+/**
+ * Tai khoan quan tri that (0015). Thay cho cap bien moi truong SUPERADMIN_* — bien moi truong chi
+ * cho DUNG MOT tai khoan, doi mat khau phai sua file + restart, va moi thao tac deu mang cung mot
+ * danh tinh nen audit log khong truy duoc ai.
+ *
+ * Bien moi truong van duoc giu lam duong vao du phong cho lan cai dat dau tien, khi bang nay con
+ * rong thi chua the dang nhap de tao tai khoan dau tien.
+ */
+export const adminUsers = pgTable(
+  'admin_users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    username: text('username').notNull(),
+    name: text('name').notNull(),
+    // scrypt, dinh dang "<salt_hex>:<hash_hex>" -- cung hashPassword() voi subscribers/tenants.
+    passwordHash: text('password_hash').notNull(),
+    passwordIssuedAt: timestamp('password_issued_at', { withTimezone: true }).notNull().defaultNow(),
+    status: text('status').notNull().default('ACTIVE'),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    usernameUq: uniqueIndex('admin_users_username_uq').on(t.username).where(sql`${t.deletedAt} IS NULL`),
+  }),
+);
 
 export const tenants = pgTable(
   'tenants',

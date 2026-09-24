@@ -80,6 +80,18 @@ export const DeviceTelemetryPushSchema = z.object({
 });
 export type DeviceTelemetryPushInput = z.infer<typeof DeviceTelemetryPushSchema>;
 
+// Admin tu go key/secret khi cap cho thiet bi (khong con tu sinh ngau nhien) -- xem
+// devices.service.ts setPushApiKey()/setRadiusSecret().
+export const SetDevicePushKeySchema = z.object({
+  api_key: z.string().min(8).max(255),
+});
+export type SetDevicePushKeyInput = z.infer<typeof SetDevicePushKeySchema>;
+
+export const SetDeviceRadiusSecretSchema = z.object({
+  secret: z.string().min(4).max(255),
+});
+export type SetDeviceRadiusSecretInput = z.infer<typeof SetDeviceRadiusSecretSchema>;
+
 export const ListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(50),
   cursor: z.string().nullable().optional(),

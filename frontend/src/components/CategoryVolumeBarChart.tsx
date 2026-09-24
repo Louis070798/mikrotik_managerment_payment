@@ -16,7 +16,7 @@ type Props = {
  * (theo bucket THỜI GIAN của 1 thực thể). Bỏ qua mục nào bytes=null (chưa có dữ liệu thật) thay vì
  * vẽ thành cột 0 — 1 cột 0 giả có thể bị đọc nhầm là "đã đo được, bằng 0".
  */
-export const CategoryVolumeBarChart: React.FC<Props> = ({ items, barColor = '#009688', height = 220 }) => {
+export const CategoryVolumeBarChart: React.FC<Props> = ({ items, barColor = '#146ca8', height = 220 }) => {
     const known = items.filter((item): item is { label: string; bytes: number } => item.bytes !== null && item.bytes !== undefined);
     const unit = useMemo(() => pickByteUnit(Math.max(1, ...known.map(item => item.bytes))), [known]);
     const rows = known.map(item => ({ label: item.label, scaled: item.bytes / unit.divisor }));

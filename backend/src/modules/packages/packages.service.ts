@@ -3,6 +3,7 @@ import { and, eq, inArray, isNull, sql, SQL } from 'drizzle-orm';
 import { DB_TOKEN, DbClient } from '@db/db.module';
 import { packages, subscribers } from '@db/schema';
 import { ApiException } from '@common/api-exception';
+import { assertTenantOwns, tenantCondition } from '@common/tenant-scope';
 import { AuditService } from '@audit/audit.service';
 import { diffOf } from '@common/diff';
 import { CreatePackageInput, UpdatePackageInput } from './dto';
@@ -38,6 +39,9 @@ export class PackagesService {
 
   async list(filter: ListPackagesFilter) {
     const conditions: SQL[] = [isNull(packages.deletedAt)];
+    // Loc theo tenant cua actor, khong phu thuoc filter.tenantId do client dat.
+    const actorScope = tenantCondition(packages.tenantId);
+    if (actorScope) conditions.push(actorScope);
     if (filter.tenantId) conditions.push(eq(packages.tenantId, filter.tenantId));
 
     const rows = await this.db
@@ -60,6 +64,7 @@ export class PackagesService {
   async getById(id: string) {
     const row = await this.db.query.packages.findFirst({ where: and(eq(packages.id, id), isNull(packages.deletedAt)) });
     if (!row) throw new ApiException('PACKAGE_NOT_FOUND', `Package ${id} not found`);
+    assertTenantOwns(row.tenantId, 'PACKAGE_NOT_FOUND', `Package ${id} not found`);
     const [{ count }] = await this.db
       .select({ count: sql<number>`count(*)::int` })
       .from(subscribers)

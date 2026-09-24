@@ -1,17 +1,20 @@
-import { createHash, randomBytes } from 'crypto';
+import { createHash } from 'crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { and, count, desc, eq, gte, isNull, lte, sql, SQL } from 'drizzle-orm';
 import { DB_TOKEN, DbClient } from '@db/db.module';
 import { devices, interfaceCounterDeltas, interfaceCounterSamples, interfaces, rawTelemetryEvents, ships } from '@db/schema';
 import { ApiException } from '@common/api-exception';
+import { assertTenantOwns, currentTenantId } from '@common/tenant-scope';
 import { AuditService } from '@audit/audit.service';
 import { diffOf } from '@common/diff';
 import { toDate } from '@common/sql-date';
 import { bucketSql } from '@telemetry-normalize/aggregation';
 import { CollectorTarget } from '@collectors/collector.types';
 import { interfaceCounterReadingToEvent } from '@collectors/interface-counter.collector';
-import { buildRadiusSecretVarName, EnvSecretStore } from '@secrets/env-secret-store';
+import { EnvSecretStore } from '@secrets/env-secret-store';
+import { decryptReversible, encryptReversible } from '@secrets/reversible-crypto';
 import { InventoryCacheService } from '@inventory-cache/inventory-cache.service';
+import { FreeradiusAaaService } from '@freeradius-sync/freeradius-aaa.service';
 import { DASHBOARD_UNITS, makeDashboardMeta, resolvePeriod } from '../dashboard/dashboard.contract';
 import { computeGap } from '../dashboard/dashboard.service';
 import type { DashboardQuery } from '../dashboard/dto';
@@ -74,7 +77,21 @@ export class DevicesService {
     private readonly telemetry: TelemetryService,
     private readonly secrets: EnvSecretStore,
     private readonly inventoryCache: InventoryCacheService,
+    private readonly aaa: FreeradiusAaaService,
   ) {}
+
+  /**
+   * Thiet bi khong mang tenant_id — no thuoc ve mot TAU, va tau moi mang tenant_id. Nen moi phep
+   * loc theo dai ly o day deu phai di qua ships.
+   */
+  private async shipTenantId(shipId: string | null | undefined): Promise<string | null> {
+    if (!shipId) return null;
+    const ship = await this.db.query.ships.findFirst({
+      where: and(eq(ships.id, shipId), isNull(ships.deletedAt)),
+      columns: { tenantId: true },
+    });
+    return ship?.tenantId ?? null;
+  }
 
   async list(filter: ListDevicesFilter) {
     const conditions: SQL[] = [isNull(devices.deletedAt)];
@@ -82,17 +99,26 @@ export class DevicesService {
     if (filter.role) conditions.push(eq(devices.role, filter.role as any));
     if (filter.status) conditions.push(eq(devices.status, filter.status as any));
 
-    const rows = await this.db
-      .select()
-      .from(devices)
-      .where(and(...conditions))
-      .orderBy(devices.name);
+    // Dai ly chi thay thiet bi tren tau cua minh -> join ships va loc theo tenant_id cua actor.
+    // Thiet bi chua gan tau (ship_id null) khong thuoc ve dai ly nao nen bi loai luon.
+    const tenantId = currentTenantId();
+    const rows = tenantId
+      ? (
+          await this.db
+            .select({ device: devices })
+            .from(devices)
+            .innerJoin(ships, eq(devices.shipId, ships.id))
+            .where(and(...conditions, isNull(ships.deletedAt), eq(ships.tenantId, tenantId)))
+            .orderBy(devices.name)
+        ).map((r) => r.device)
+      : await this.db.select().from(devices).where(and(...conditions)).orderBy(devices.name);
     return rows.map(toApi);
   }
 
   async getById(id: string) {
     const row = await this.db.query.devices.findFirst({ where: and(eq(devices.id, id), isNull(devices.deletedAt)) });
     if (!row) throw new ApiException('DEVICE_NOT_FOUND', `Device ${id} not found`);
+    assertTenantOwns(await this.shipTenantId(row.shipId), 'DEVICE_NOT_FOUND', `Device ${id} not found`);
     return toApi(row);
   }
 
@@ -424,23 +450,22 @@ export class DevicesService {
   }
 
   /**
-   * Cấp API key push mới cho thiết bị (model push 1 chiều — xem migrations/control/0007).
-   * Key thật CHỈ trả về đúng 1 lần ở response này; từ sau đó server chỉ giữ sha256(key).
+   * Đặt API key push cho thiết bị — do ADMIN TỰ GÕ (không còn tự sinh ngẫu nhiên), giống hệt chính
+   * sách mật khẩu tenant/subscriber. Server chỉ lưu sha256(key), key thật KHÔNG bao giờ trả lại qua
+   * bất kỳ response nào (khác trước đây — trước chỉ không lưu lại nhưng vẫn trả 1 lần lúc tạo).
    */
-  async issuePushApiKey(deviceId: string) {
+  async setPushApiKey(deviceId: string, apiKey: string) {
     const device = await this.db.query.devices.findFirst({ where: and(eq(devices.id, deviceId), isNull(devices.deletedAt)) });
     if (!device) throw new ApiException('DEVICE_NOT_FOUND', `Device ${deviceId} not found`);
 
-    const rawKey = randomBytes(32).toString('hex');
     const issuedAt = new Date();
     await this.db
       .update(devices)
-      .set({ apiKeyHash: sha256Hex(rawKey), apiKeyIssuedAt: issuedAt, updatedAt: issuedAt })
+      .set({ apiKeyHash: sha256Hex(apiKey), apiKeyIssuedAt: issuedAt, updatedAt: issuedAt })
       .where(eq(devices.id, deviceId));
 
     await this.audit.record({ action: 'device.push_key_issue', resourceType: 'device', resourceId: deviceId, result: 'SUCCESS' });
-    // Plain object (không { data, meta }) — EnvelopeInterceptor tự bọc, giống create()/update().
-    return { api_key: rawKey, issued_at: issuedAt.toISOString() };
+    return { issued_at: issuedAt.toISOString() };
   }
 
   /** Thu hồi API key push — thiết bị dùng key cũ sẽ nhận DEVICE_PUSH_UNAUTHORIZED ở lần push kế tiếp. */
@@ -453,13 +478,14 @@ export class DevicesService {
   }
 
   /**
-   * Cấp RADIUS secret mới cho thiết bị — sinh ngẫu nhiên qua EnvSecretStore (xem file đó để biết vì
-   * sao "env:" chỉ tạm thời, ADR-05), tự đặt credential_ref trỏ tới biến vừa tạo. Nếu thiết bị đã có
-   * credential_ref env:CU từ trước, thu hồi biến cũ luôn để không rò rỉ secret bỏ đi trong .env.
-   * Secret thật CHỈ trả về đúng 1 lần ở response này — RADIUS Accounting-Request kế tiếp từ router
-   * dùng được ngay (EnvCredentialResolver đọc process.env trực tiếp, không cache).
+   * Đặt RADIUS secret cho thiết bị — do ADMIN TỰ GÕ (không còn tự sinh ngẫu nhiên). Secret RADIUS
+   * khác mật khẩu đăng nhập: server cần lại đúng giá trị THẬT để tính Request-Authenticator (RFC
+   * 2866), không thể chỉ so khớp 1 chiều — nên mã hoá 2 chiều (AES-256-GCM, xem reversible-crypto.ts)
+   * bằng RADIUS_SECRET_ENCRYPTION_KEY rồi lưu ngay trong credential_ref (scheme "enc:..."), thay cho
+   * EnvSecretStore tự sinh + lưu biến .env trước đây. Nếu thiết bị đang dùng credential_ref kiểu cũ
+   * "env:TEN_BIEN", thu hồi biến đó luôn để không rò rỉ secret bỏ đi trong .env.
    */
-  async issueRadiusSecret(deviceId: string) {
+  async setRadiusSecret(deviceId: string, secret: string) {
     const device = await this.db.query.devices.findFirst({ where: and(eq(devices.id, deviceId), isNull(devices.deletedAt)) });
     if (!device) throw new ApiException('DEVICE_NOT_FOUND', `Device ${deviceId} not found`);
 
@@ -467,17 +493,73 @@ export class DevicesService {
       this.secrets.revoke(device.credentialRef.slice('env:'.length));
     }
 
-    const varName = buildRadiusSecretVarName(device.code);
-    const secret = this.secrets.issue(varName);
-    const credentialRef = `env:${varName}`;
+    const encryptionKey = process.env.RADIUS_SECRET_ENCRYPTION_KEY;
+    if (!encryptionKey) throw new ApiException('RADIUS_SECRET_ENCRYPTION_UNAVAILABLE', 'RADIUS_SECRET_ENCRYPTION_KEY chưa được cấu hình trên server');
+    const credentialRef = `enc:${encryptReversible(secret, encryptionKey)}`;
     const issuedAt = new Date();
     await this.db.update(devices).set({ credentialRef, radiusSecretIssuedAt: issuedAt, updatedAt: issuedAt }).where(eq(devices.id, deviceId));
 
     await this.audit.record({ action: 'device.radius_secret_issue', resourceType: 'device', resourceId: deviceId, result: 'SUCCESS' });
+
+    // RADIUS_MODE=freeradius: FreeRADIUS moi la ben xac thuc, nen secret phai nam trong bang `nas`
+    // cua no chu khong chi trong control DB. Khong co IP thi khong khai NAS duoc -- FreeRADIUS
+    // nhan dien client bang dia chi.
+    if (this.aaa.enabled && device.ipAddress) {
+      await this.aaa.upsertNas(device.ipAddress, device.code ?? device.id, secret, device.name ?? undefined);
+    }
     // Cache giữ nguyên devices.credential_ref cũ tới chu kỳ làm mới kế tiếp (tối đa 20s) nếu không
     // invalidate ngay — RadiusServerService sẽ verify secret MỚI cấp thất bại trong lúc đó.
     this.inventoryCache.invalidate();
-    return { credential_ref: credentialRef, secret, issued_at: issuedAt.toISOString() };
+    return { issued_at: issuedAt.toISOString() };
+  }
+
+  /**
+   * ĐỌC LẠI shared secret RADIUS ở dạng plaintext để admin dán vào "/radius add secret=..." trên
+   * MikroTik. Khác hẳn mật khẩu đăng nhập (scrypt, một chiều, không đọc lại được): secret RADIUS
+   * BẮT BUỘC phải giữ được giá trị thật vì server cần chính nó để tính lại Request-Authenticator
+   * (RFC 2865/2866), nên nó vốn đã được mã hoá 2 chiều — endpoint này không làm dữ liệu kém an
+   * toàn hơn, chỉ mở đúng thứ server vẫn đọc được mỗi lần nhận gói.
+   *
+   * Đổi lại: MỖI lần đọc ghi 1 dòng audit riêng (device.radius_secret_reveal) để còn truy được ai
+   * đã xem secret của thiết bị nào, lúc nào.
+   */
+  async getRadiusSecret(deviceId: string) {
+    const device = await this.db.query.devices.findFirst({ where: and(eq(devices.id, deviceId), isNull(devices.deletedAt)) });
+    if (!device) throw new ApiException('DEVICE_NOT_FOUND', `Device ${deviceId} not found`);
+    if (!device.credentialRef) {
+      throw new ApiException('DEVICE_RADIUS_SECRET_NOT_SET', `Thiết bị ${deviceId} chưa được đặt RADIUS secret`);
+    }
+
+    let secret: string;
+    let scheme: 'enc' | 'env';
+    if (device.credentialRef.startsWith('enc:')) {
+      scheme = 'enc';
+      const encryptionKey = process.env.RADIUS_SECRET_ENCRYPTION_KEY;
+      if (!encryptionKey) throw new ApiException('RADIUS_SECRET_ENCRYPTION_UNAVAILABLE', 'RADIUS_SECRET_ENCRYPTION_KEY chưa được cấu hình trên server');
+      try {
+        secret = decryptReversible(device.credentialRef.slice('enc:'.length), encryptionKey);
+      } catch (err) {
+        // Gần như luôn là do RADIUS_SECRET_ENCRYPTION_KEY đã bị thay sau khi secret được cấp —
+        // nói thẳng ra thay vì trả 500, vì cách sửa là đặt lại secret chứ không phải thử lại.
+        throw new ApiException('RADIUS_SECRET_DECRYPT_FAILED', `Không giải mã được credential_ref (khoá mã hoá có thể đã đổi sau khi cấp secret): ${(err as Error).message}`);
+      }
+    } else if (device.credentialRef.startsWith('env:')) {
+      scheme = 'env';
+      const varName = device.credentialRef.slice('env:'.length);
+      const fromEnv = this.secrets.get(varName);
+      if (!fromEnv) throw new ApiException('DEVICE_RADIUS_SECRET_NOT_SET', `credential_ref trỏ tới biến môi trường ${varName} nhưng biến này rỗng`);
+      secret = fromEnv;
+    } else {
+      throw new ApiException('RADIUS_SECRET_DECRYPT_FAILED', `credential_ref dùng scheme không hỗ trợ: ${device.credentialRef.split(':')[0]}`);
+    }
+
+    await this.audit.record({ action: 'device.radius_secret_reveal', resourceType: 'device', resourceId: deviceId, result: 'SUCCESS' });
+    return {
+      secret,
+      scheme,
+      issued_at: device.radiusSecretIssuedAt?.toISOString() ?? null,
+      nas_ip_address: device.ipAddress ?? null,
+    };
   }
 
   /** Thu hồi RADIUS secret — router dùng secret cũ sẽ bị Accounting-Request từ chối ở gói kế tiếp. */
@@ -490,6 +572,7 @@ export class DevicesService {
     }
     await this.db.update(devices).set({ credentialRef: null, radiusSecretIssuedAt: null, updatedAt: new Date() }).where(eq(devices.id, deviceId));
     await this.audit.record({ action: 'device.radius_secret_revoke', resourceType: 'device', resourceId: deviceId, result: 'SUCCESS' });
+    if (this.aaa.enabled && device.ipAddress) await this.aaa.removeNas(device.ipAddress);
     this.inventoryCache.invalidate();
   }
 

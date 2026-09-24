@@ -24,6 +24,10 @@ _sync-temp.tar.gz
 *.tar.gz
 *.zip
 
+# Ban xuat JSON cua contracts/openapi.yaml -- sinh ra khi can (vd import Postman), khong phai
+# nguon that (openapi.yaml moi la source of truth), de tranh commit ban cu bi lech.
+contracts/openapi.json
+
 # OS / editor
 .DS_Store
 Thumbs.db

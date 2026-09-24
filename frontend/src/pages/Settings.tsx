@@ -71,7 +71,7 @@ export const Settings: React.FC = () => {
     const [dbBusy, setDbBusy] = useState(false);
     const [dbMsg, setDbMsg] = useState<{ ok: boolean; text: string }>();
 
-    const [radiusForm, setRadiusForm] = useState<PortsForm>({ radius_auth_port: '', radius_acct_port: '', reason: '' });
+    const [radiusForm, setRadiusForm] = useState<PortsForm>({ radius_server_address: '', radius_auth_port: '', radius_acct_port: '', radius_coa_port: '', reason: '' });
     const [radiusBusy, setRadiusBusy] = useState(false);
     const [radiusMsg, setRadiusMsg] = useState<{ ok: boolean; text: string }>();
 
@@ -117,7 +117,7 @@ export const Settings: React.FC = () => {
             if (!data) return;
             setCurrent(data);
             setDbForm({ host: data.database?.host ?? '', port: data.database?.port ? String(data.database.port) : '', database: data.database?.database ?? '', username: data.database?.username ?? '', password: '', reason: '' });
-            setRadiusForm({ radius_auth_port: data.radius_auth_port ? String(data.radius_auth_port) : '', radius_acct_port: data.radius_acct_port ? String(data.radius_acct_port) : '', reason: '' });
+            setRadiusForm({ radius_server_address: data.radius_server_address ?? '', radius_auth_port: data.radius_auth_port ? String(data.radius_auth_port) : '', radius_acct_port: data.radius_acct_port ? String(data.radius_acct_port) : '', radius_coa_port: data.radius_coa_port ? String(data.radius_coa_port) : '', reason: '' });
             setCollectorForm({ netflow_port: data.netflow_port ? String(data.netflow_port) : '', dns_log_port: data.dns_log_port ? String(data.dns_log_port) : '', reason: '' });
             setZtForm({ token: '', reason: '' });
         } catch (requestError) {
@@ -191,8 +191,10 @@ export const Settings: React.FC = () => {
         e.preventDefault();
         void patchAndReport(
             {
+                ...(radiusForm.radius_server_address ? { radius_server_address: radiusForm.radius_server_address.trim() } : {}),
                 ...(radiusForm.radius_auth_port ? { radius_auth_port: Number(radiusForm.radius_auth_port) } : {}),
                 ...(radiusForm.radius_acct_port ? { radius_acct_port: Number(radiusForm.radius_acct_port) } : {}),
+                ...(radiusForm.radius_coa_port ? { radius_coa_port: Number(radiusForm.radius_coa_port) } : {}),
                 reason: radiusForm.reason,
             },
             setRadiusBusy, setRadiusMsg,
@@ -353,11 +355,15 @@ export const Settings: React.FC = () => {
                     {/* ---- RADIUS ---- */}
                     <section className="glass-panel dashboard-section">
                         <div className="section-heading"><div><h2>RADIUS</h2></div></div>
-                        <div className="settings-current">Hiện tại: Access <strong>{current?.radius_auth_port ?? '—'}</strong> · Accounting <strong>{current?.radius_acct_port ?? '—'}</strong></div>
+                        <div className="settings-current">Hiện tại: Địa chỉ <strong>{current?.radius_server_address ?? '—'}</strong> · Access <strong>{current?.radius_auth_port ?? '—'}</strong> · Accounting <strong>{current?.radius_acct_port ?? '—'}</strong> · CoA <strong>{current?.radius_coa_port ?? '—'}</strong></div>
                         <form onSubmit={saveRadius}>
                             <div className="settings-field-grid">
+                                {/* Dia chi nay la thu ROUTER se ket noi toi (thuong la IP ZeroTier cua server), KHONG
+                                    phai dia chi backend tu bind -- server khong bao gio tu goi toi no. */}
+                                <Field label="Địa chỉ server RADIUS (router kết nối tới)"><input disabled={readOnly} placeholder="vd 10.147.17.1" value={radiusForm.radius_server_address} onChange={e => setRadiusForm({ ...radiusForm, radius_server_address: e.target.value })} /></Field>
                                 <Field label="Access port"><input type="number" disabled={readOnly} value={radiusForm.radius_auth_port} onChange={e => setRadiusForm({ ...radiusForm, radius_auth_port: e.target.value })} /></Field>
                                 <Field label="Accounting port"><input type="number" disabled={readOnly} value={radiusForm.radius_acct_port} onChange={e => setRadiusForm({ ...radiusForm, radius_acct_port: e.target.value })} /></Field>
+                                <Field label="CoA port (router lắng nghe)"><input type="number" disabled={readOnly} value={radiusForm.radius_coa_port} onChange={e => setRadiusForm({ ...radiusForm, radius_coa_port: e.target.value })} /></Field>
                             </div>
                             <div className="settings-footer">
                                 <Field label="Lý do thay đổi"><input required minLength={3} disabled={readOnly} value={radiusForm.reason} onChange={e => setRadiusForm({ ...radiusForm, reason: e.target.value })} /></Field>

@@ -92,6 +92,9 @@ describe('Phase 2 dashboard/reconciliation contract', () => {
     const actual = [...controllerRoutes(DashboardController), ...controllerRoutes(ReconciliationController)].sort();
     const expected = [
       'get /dashboard/global',
+      // Them khi bo sung GET /dashboard/global/reconciliation (openapi v1.18.0) — danh sach nay
+      // khong duoc cap nhat theo nen test do do fail.
+      'get /dashboard/global/reconciliation',
       'get /areas/{areaId}/dashboard',
       'get /ships/{shipId}/dashboard',
       'get /ships/{shipId}/reconciliation',

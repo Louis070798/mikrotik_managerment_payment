@@ -85,6 +85,41 @@ async function closeRadiusBinding(db: DbClient, params: { shipId: string; framed
     );
 }
 
+/**
+ * Cong quota theo PHAN TANG THEM cua phien, khong phai theo tong phien.
+ *
+ * Truoc day quota chi duoc cong mot lan duy nhat luc STOP, bang TONG byte ca phien. Hai hong hoc:
+ *
+ *   1. NAS retransmit Accounting-Stop moi ~3 giay cho toi khi duoc ACK (hanh vi chuan RFC 2866).
+ *      Moi lan gui lai deu cong them mot lan nua -> quota phong len 2-5 lan, user bi tu choi dang
+ *      nhap vi "het quota" trong khi chua dung het.
+ *   2. Phien khong bao gio ket thuc thi khong bao gio cong -> quota dung yen o 0 va user dung vo han.
+ *
+ * Cach sua: radiusSessions.upload/downloadBytes luon giu TONG LUY KE moi nhat cua phien do. Vi vay
+ * phan chua tinh = tong moi - tong da luu. Tinh chat:
+ *   - Goi lai cung mot gia tri (retransmit) -> delta = 0 -> khong cong gi. Bat bien theo thiet ke,
+ *     khong phu thuoc vao khoa chong trung.
+ *   - INTERIM cong dan trong luc phien dang chay -> quota phan anh thuc te theo thoi gian thuc.
+ *   - Counter trong phien bi reset (am) -> kep ve 0, khong bao gio tru quota di.
+ */
+async function accrueQuotaDelta(
+  db: DbClient,
+  deviceId: string | null | undefined,
+  username: string,
+  previousTotal: number,
+  newTotal: number,
+): Promise<void> {
+  if (!deviceId) return;
+  const delta = newTotal - previousTotal;
+  if (delta <= 0) return;
+  // Cong bang SQL increment chu khong read-modify-write -- tranh race giua cac goi accounting
+  // den gan nhau cua cung mot subscriber tren nhieu phien.
+  await db
+    .update(subscribers)
+    .set({ quotaUsedBytes: sql`${subscribers.quotaUsedBytes} + ${delta}`, updatedAt: new Date() })
+    .where(and(eq(subscribers.nasDeviceId, deviceId), eq(subscribers.username, username), isNull(subscribers.deletedAt)));
+}
+
 export async function normalizeRadiusAccountingEvent(
   db: DbClient,
   event: typeof rawTelemetryEvents.$inferSelect,
@@ -178,6 +213,15 @@ export async function normalizeRadiusAccountingEvent(
           .update(radiusSessions)
           .set({ uploadBytes, downloadBytes, sessionTimeS, lastInterimAt: event.observedAt, framedIp: framedIp ?? existing.framedIp, updatedAt: new Date() })
           .where(eq(radiusSessions.id, existing.id));
+        // Cong quota NGAY trong luc phien chay. Truoc day nhanh nay khong dong toi quota, nen mot
+        // may khong bao gio ngat phien se dung vo han ma quota van bao 0.
+        await accrueQuotaDelta(
+          db,
+          event.deviceId,
+          username,
+          (existing.uploadBytes ?? 0) + (existing.downloadBytes ?? 0),
+          (uploadBytes ?? existing.uploadBytes ?? 0) + (downloadBytes ?? existing.downloadBytes ?? 0),
+        );
       }
     } else {
       // Missed Start — best-effort session creation from the first Interim we see.
@@ -248,16 +292,12 @@ export async function normalizeRadiusAccountingEvent(
     await closeRadiusBinding(db, { shipId, framedIp, acctSessionId: payload.acct_session_id, observedAt: event.observedAt });
   }
 
-  // Cộng dồn quota thật cho subscriber khớp (nas_device_id, username) — subscribers.quota_used_bytes
-  // trước đây không bao giờ được ghi (luôn 0), khiến kiểm tra quota ở Access-Request luôn vô nghĩa.
-  // Cộng bằng SQL increment (không phải read-modify-write) để tránh race giữa các STOP đồng thời.
-  const sessionBytesTotal = (finalUploadBytes ?? 0) + (finalDownloadBytes ?? 0);
-  if (event.deviceId && username && sessionBytesTotal > 0) {
-    await db
-      .update(subscribers)
-      .set({ quotaUsedBytes: sql`${subscribers.quotaUsedBytes} + ${sessionBytesTotal}`, updatedAt: new Date() })
-      .where(and(eq(subscribers.nasDeviceId, event.deviceId), eq(subscribers.username, username), isNull(subscribers.deletedAt)));
-  }
+  // Chi cong PHAN CHUA TINH cua phien, khong cong lai tu dau -- xem accrueQuotaDelta().
+  // `existing` la trang thai TRUOC khi update o tren, nen no chinh la moc "da tinh toi dau".
+  // STOP gui lai lan hai se thay previousTotal == newTotal -> delta 0 -> khong cong trung.
+  const previousTotal = existing ? (existing.uploadBytes ?? 0) + (existing.downloadBytes ?? 0) : 0;
+  const newTotal = (finalUploadBytes ?? 0) + (finalDownloadBytes ?? 0);
+  await accrueQuotaDelta(db, event.deviceId, username, previousTotal, newTotal);
 
   return { ok: true };
 }

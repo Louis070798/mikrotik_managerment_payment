@@ -9,6 +9,9 @@ import { AuditLibModule } from '@audit/audit.module';
 import { AlertsLibModule } from '@alerts-lib/alerts.module';
 import { CollectorsModule } from '@collectors/collectors.module';
 import { RadiusServerModule } from '@radius-server/radius-server.module';
+import { DbAaaModule } from '@db-aaa/db-aaa.module';
+import { SecretsModule } from '@secrets/secrets.module';
+import { FreeradiusSyncModule } from '@freeradius-sync/freeradius-sync.module';
 import { NetflowCollectorModule } from '@netflow-collector/netflow-collector.module';
 import { DnsLogCollectorModule } from '@dns-log-collector/dns-log-collector.module';
 import { RequestContextMiddleware } from '@common/request-context.middleware';
@@ -36,6 +39,12 @@ import { SettingsModule } from '../../modules/settings/settings.module';
     AppConfigModule,
     EventEmitterModule.forRoot(),
     DbModule,
+    // Guard can EnvSecretStore de doc AUTH_TOKEN_SECRET khi verify token.
+    SecretsModule,
+    // Ket noi thu hai toi PostgreSQL cua FreeRADIUS + job dong bo radacct -> radius_sessions.
+    // Ca hai deu tu vo hieu khi DATABASE_AAA_URL / RADIUS_MODE chua duoc dat.
+    DbAaaModule,
+    FreeradiusSyncModule,
     RegistryModule,
     AuditLibModule,
     AlertsLibModule,

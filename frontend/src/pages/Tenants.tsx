@@ -218,10 +218,10 @@ export const Tenants: React.FC = () => {
     return (
         <div>
             <div className="mini-stat-row">
-                <MiniStat label="Tổng tenant" value={formatCount(tenants.length)} status="healthy" />
-                <MiniStat label="Tenant gốc" value={formatCount(rootCount)} />
-                <MiniStat label="Đã có tài khoản" value={formatCount(withLoginCount)} status={withLoginCount > 0 ? 'healthy' : 'unknown'} />
-                <MiniStat label="Chưa có tài khoản" value={formatCount(tenants.length - withLoginCount)} status={tenants.length - withLoginCount > 0 ? 'warning' : 'healthy'} />
+                <MiniStat icon={<Building2 size={12} />} label="Tổng tenant" value={formatCount(tenants.length)} status="healthy" />
+                <MiniStat icon={<Building2 size={12} />} label="Tenant gốc" value={formatCount(rootCount)} />
+                <MiniStat icon={<ShieldCheck size={12} />} label="Đã có tài khoản" value={formatCount(withLoginCount)} status={withLoginCount > 0 ? 'healthy' : 'unknown'} />
+                <MiniStat icon={<ShieldOff size={12} />} label="Chưa có tài khoản" value={formatCount(tenants.length - withLoginCount)} status={tenants.length - withLoginCount > 0 ? 'warning' : 'healthy'} />
             </div>
 
             {error && <DataStateNotice dataStatus="UNAVAILABLE" title="Không tải được danh sách tenant" description={error} onRetry={() => void fetchData()} />}

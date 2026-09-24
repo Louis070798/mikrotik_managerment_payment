@@ -4,10 +4,12 @@
   "private": true,
   "description": "Backend/Platform for MikroTik Centralized Fleet Management — Inventory + Server Health module",
   "scripts": {
+    "check:freeradius": "node scripts/check-freeradius.mjs",
     "build": "nest build",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "migrate": "tsx scripts/migrate.ts",
+    "admin:create": "tsx scripts/create-admin.ts",
     "migrate:test": "tsx scripts/migrate.ts --env=.env.test",
     "seed:test": "tsx scripts/seed-test.ts --env=.env.test",
     "db:check": "drizzle-kit check",

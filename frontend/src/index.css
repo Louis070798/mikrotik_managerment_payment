@@ -7,29 +7,33 @@
   --input-bg: rgba(15, 23, 42, 0.6);
   --text-main: #e2e8f0;
   --text-muted: #94a3b8;
-  --primary: #3b82f6;
-  --primary-hover: #60a5fa;
+  --primary: #38bdf8;
+  --primary-hover: #7dd3fc;
   --danger: #ef4444;
   --success: #10b981;
   --warning: #f59e0b;
   --border: rgba(255, 255, 255, 0.1);
   --glass-border: rgba(255, 255, 255, 0.05);
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* Font rieng cho SO LIEU (bytes/rate/counter...) -- tach biet voi chu UI thuong de dong so
+     thang hang, doc nhanh hon, dung dung "product type" cua skill UI/UX (dashboard/data-heavy
+     admin console -> monospace cho data). Khong doi font UI chinh (Inter van dung cho label/text). */
+  --font-mono: 'Fira Code', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
   color-scheme: dark;
 }
 
 [data-theme="light"] {
-  --bg-color: #f1f5f9;
+  --bg-color: #eef3f8;
   --panel-bg: rgba(255, 255, 255, 0.9);
   --filter-bar-bg: rgba(255, 255, 255, 0.5);
   --input-bg: #ffffff;
   --nav-hover-bg: rgba(0, 0, 0, 0.04);
-  --nav-active-bg: rgba(37, 99, 235, 0.08);
+  --nav-active-bg: rgba(20, 108, 168, 0.10);
   --text-main: #334155;
   --text-heading: #0f172a;
   --text-muted: #475569;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
+  --primary: #146ca8;
+  --primary-hover: #0e4f7d;
   --danger: #ef4444;
   --success: #10b981;
   --warning: #f59e0b;
@@ -41,13 +45,13 @@
 
 [data-theme="light"] body {
   background-image:
-    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(20, 108, 168, 0.10) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(0, 160, 166, 0.06) 0px, transparent 50%);
 }
 
 body {
   margin: 0;
-  background: #f8fafc;
+  background: #f3f6f9;
   color: #334155;
   min-height: 100vh;
 }
@@ -461,18 +465,48 @@ input:focus-visible {
   flex: 1 1 150px;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.6rem 0.85rem;
+  gap: 0.3rem;
+  padding: 0.75rem 0.9rem;
   background: var(--panel-bg);
   border: 1px solid var(--glass-border);
   border-left: 3px solid var(--text-muted);
-  border-radius: 8px;
+  border-radius: 9px;
   animation: fadeInUp 0.4s ease-out both;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mini-stat:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.18);
 }
 
 .mini-stat-healthy { border-left-color: var(--success); }
 .mini-stat-warning { border-left-color: var(--warning); animation: fadeInUp 0.4s ease-out both, alertGlowWarning 2.2s ease-in-out 0.4s infinite; }
 .mini-stat-critical { border-left-color: var(--danger); animation: fadeInUp 0.4s ease-out both, alertGlowCritical 1.6s ease-in-out 0.4s infinite; }
+
+.mini-stat-top {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Icon nho dat trong khung mau nhat theo trang thai -- "icon + label" thay vi chi dua vao mau vien
+   trai (mau don doc kem theo status khong du ro, de nham voi nguoi mu mau). */
+.mini-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-muted);
+}
+
+.mini-stat-healthy .mini-stat-icon { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.mini-stat-warning .mini-stat-icon { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.mini-stat-critical .mini-stat-icon { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
 
 .mini-stat-label {
   font-size: 0.68rem;
@@ -482,6 +516,7 @@ input:focus-visible {
 }
 
 .mini-stat-value {
+  font-family: var(--font-mono);
   font-size: 1.15rem;
   font-weight: 600;
   color: var(--text-heading);
@@ -516,6 +551,7 @@ input:focus-visible {
 }
 
 .donut-center-value {
+  font-family: var(--font-mono);
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -550,7 +586,9 @@ input:focus-visible {
 
 .stat-value-unavailable {
   color: var(--text-muted);
-  font-size: 1.35rem;
+  font-size: 1rem;
+  font-weight: 500;
+  font-style: italic;
 }
 
 .metric-description {
@@ -609,16 +647,25 @@ input:focus-visible {
 }
 
 .data-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 50%;
   color: var(--warning);
-  padding-top: 0.1rem;
+  background: rgba(245, 158, 11, 0.14);
 }
 
 .data-state-critical .data-state-icon {
   color: var(--danger);
+  background: rgba(239, 68, 68, 0.14);
 }
 
 .data-state-healthy .data-state-icon {
   color: var(--success);
+  background: rgba(16, 185, 129, 0.14);
 }
 
 .data-state-copy {
@@ -807,17 +854,27 @@ input:focus-visible {
   font-size: 12px;
 }
 
+/* "Bang readout" HUD -- moi truong thong tin (Trang thai/RouterOS/Model/...) thanh 1 o rieng co
+   vien mong, giong day trang thai tren bang dieu khien, thay vi 1 dong chu lien tuc kho tach y. */
 .dashboard-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
+  gap: 0.5rem;
   margin: 0.7rem 0 1rem;
   color: var(--text-muted);
   font-size: 0.78rem;
 }
 
+.dashboard-meta > * {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--filter-bar-bg);
+}
+
 .dashboard-meta strong {
   color: var(--text-main);
+  font-weight: 600;
 }
 
 .table-shell {
@@ -926,12 +983,22 @@ input:focus-visible {
   font-weight: 600;
 }
 
+/* Khoang cach chuan giua cac khoi noi dung (thay cho style={{marginTop}} ram ro tung trang) --
+   ap dung ngay cho toan he thong vi moi trang deu dung .glass-panel.dashboard-section. */
+.dashboard-section {
+  margin-bottom: 1.75rem;
+}
+
+.dashboard-section:last-child {
+  margin-bottom: 0;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 0.8rem;
+  margin-bottom: 1.1rem;
 }
 
 /* Hang so lieu KPI dat canh tieu de bieu do (vd "Hom nay 12 Mbps" / "TB 7 ngay 9 Mbps" / "+18%
@@ -962,6 +1029,7 @@ input:focus-visible {
 }
 
 .chart-kpi-value {
+  font-family: var(--font-mono);
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-heading);
@@ -1030,6 +1098,7 @@ input:focus-visible {
 }
 
 .stat-value {
+  font-family: var(--font-mono);
   font-size: 2rem;
   font-weight: bold;
   color: var(--text-heading);
@@ -1310,6 +1379,9 @@ input:focus-visible {
   animation: overlayIn 0.2s ease-out both;
 }
 
+/* Popup co theo dung noi dung (khong ep full-screen nua) -- rong toi da 480px la du cho phan lon
+   form vai truong; .modal-card-wide (nhieu truong hon) rong hon; chieu cao luon tu nhien theo noi
+   dung, chi gioi han max-height 90vh + cuon rieng khi form thuc su dai. */
 .modal-card {
   width: 100%;
   max-width: 480px;

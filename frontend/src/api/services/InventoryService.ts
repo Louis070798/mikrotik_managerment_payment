@@ -11,6 +11,7 @@ import type { DeviceCreateRequest } from '../models/DeviceCreateRequest';
 import type { DeviceInterfaceTraffic } from '../models/DeviceInterfaceTraffic';
 import type { DevicePushKey } from '../models/DevicePushKey';
 import type { DeviceRadiusSecret } from '../models/DeviceRadiusSecret';
+import type { DeviceRadiusSecretValue } from '../models/DeviceRadiusSecretValue';
 import type { DeviceTelemetryPushRequest } from '../models/DeviceTelemetryPushRequest';
 import type { DeviceTelemetryPushResult } from '../models/DeviceTelemetryPushResult';
 import type { DeviceTraffic } from '../models/DeviceTraffic';
@@ -592,16 +593,20 @@ export class InventoryService {
         });
     }
     /**
-     * Cap push API key moi cho thiet bi (model push 1 chieu)
-     * Sinh key that ngau nhien, luu sha256(key) vao devices.api_key_hash, tra key that mot lan duy nhat trong response. Cap lai se vo hieu key cu ngay lap tuc.
+     * Dat push API key cho thiet bi (model push 1 chieu) -- key do ADMIN TU GO trong requestBody
+     * Luu sha256(requestBody.api_key) vao devices.api_key_hash, khong con tu sinh ngau nhien. Dat lai se vo hieu key cu ngay lap tuc.
      * @returns any Created
      * @throws ApiError
      */
     public static postDevicesPushKey({
         deviceId,
+        requestBody,
         xActorPermissions,
     }: {
         deviceId: string,
+        requestBody: {
+            api_key: string;
+        },
         /**
          * TAM THOI (AuthStubGuard, chua phai Auth/RBAC that) -- CSV permission actor duoc cap, vd 'inventory:read,inventory:write'. Thieu quyen bat buoc -> 403 FORBIDDEN.
          */
@@ -620,6 +625,8 @@ export class InventoryService {
             headers: {
                 'x-actor-permissions': xActorPermissions,
             },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 403: `FORBIDDEN -- thieu permission`,
                 404: `Not found`,
@@ -658,16 +665,55 @@ export class InventoryService {
         });
     }
     /**
-     * Cap RADIUS secret moi cho thiet bi
-     * Sinh secret that ngau nhien qua EnvSecretStore (TAM THOI, ADR-05 -- xem backend/src/libs/secrets), tu dat credential_ref tro toi bien vua tao, thu hoi bien cu neu co. Secret that tra ve DUY NHAT 1 LAN trong response nay; RADIUS Accounting-Request ke tiep tu router dung duoc ngay khong can restart server.
+     * Doc lai RADIUS secret that (plaintext) de cau hinh vao MikroTik
+     * Giai ma devices.credential_ref (scheme "enc:...", AES-256-GCM) va tra ve secret that. Khac han mat khau dang nhap (scrypt, mot chieu) -- secret RADIUS BAT BUOC giu duoc gia tri that vi server can chinh no de tinh lai Request-Authenticator (RFC 2865/2866). Moi lan goi ghi 1 dong audit device.radius_secret_reveal. Yeu cau quyen inventory:write.
+     * @returns any OK
+     * @throws ApiError
+     */
+    public static getDevicesRadiusSecret({
+        deviceId,
+        xActorPermissions,
+    }: {
+        deviceId: string,
+        /**
+         * TAM THOI (AuthStubGuard, chua phai Auth/RBAC that) -- CSV permission actor duoc cap, vd 'inventory:read,inventory:write'. Thieu quyen bat buoc -> 403 FORBIDDEN.
+         */
+        xActorPermissions?: string,
+    }): CancelablePromise<{
+        data?: DeviceRadiusSecretValue;
+        meta?: BaseMeta;
+        error?: ErrorDetails | null;
+    }> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/devices/{deviceId}/radius-secret',
+            path: {
+                'deviceId': deviceId,
+            },
+            headers: {
+                'x-actor-permissions': xActorPermissions,
+            },
+            errors: {
+                403: `FORBIDDEN -- thieu permission`,
+                404: `Not found`,
+            },
+        });
+    }
+    /**
+     * Dat RADIUS secret cho thiet bi -- secret do ADMIN TU GO trong requestBody
+     * Ma hoa 2 chieu (AES-256-GCM, RADIUS_SECRET_ENCRYPTION_KEY) requestBody.secret roi luu vao devices.credential_ref (scheme "enc:..."), khong con tu sinh ngau nhien qua EnvSecretStore. RADIUS Accounting-Request ke tiep tu router dung duoc ngay khong can restart server.
      * @returns any Created
      * @throws ApiError
      */
     public static postDevicesRadiusSecret({
         deviceId,
+        requestBody,
         xActorPermissions,
     }: {
         deviceId: string,
+        requestBody: {
+            secret: string;
+        },
         /**
          * TAM THOI (AuthStubGuard, chua phai Auth/RBAC that) -- CSV permission actor duoc cap, vd 'inventory:read,inventory:write'. Thieu quyen bat buoc -> 403 FORBIDDEN.
          */
@@ -686,6 +732,8 @@ export class InventoryService {
             headers: {
                 'x-actor-permissions': xActorPermissions,
             },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 403: `FORBIDDEN -- thieu permission`,
                 404: `Not found`,

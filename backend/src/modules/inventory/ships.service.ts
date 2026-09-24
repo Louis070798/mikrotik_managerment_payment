@@ -3,6 +3,7 @@ import { and, eq, isNull, count, ilike, SQL } from 'drizzle-orm';
 import { DB_TOKEN, DbClient } from '@db/db.module';
 import { ships, devices, areas, tenants } from '@db/schema';
 import { ApiException } from '@common/api-exception';
+import { assertTenantOwns, tenantCondition } from '@common/tenant-scope';
 import { AuditService } from '@audit/audit.service';
 import { diffOf } from '@common/diff';
 import { InventoryCacheService } from '@inventory-cache/inventory-cache.service';
@@ -24,6 +25,10 @@ export class ShipsService {
 
   async list(filter: ListShipsFilter) {
     const conditions: SQL[] = [isNull(ships.deletedAt)];
+    // Dai ly chi thay tau cua minh. Tau chua gan dai ly nao (tenant_id null) khong thuoc ve ai nen
+    // khong dai ly nao thay duoc — dung, vi gan tau cho dai ly la viec cua quan tri vien.
+    const actorScope = tenantCondition(ships.tenantId);
+    if (actorScope) conditions.push(actorScope);
     if (filter.areaId) conditions.push(eq(ships.areaId, filter.areaId));
     if (filter.status) conditions.push(eq(ships.status, filter.status as any));
     if (filter.q) conditions.push(ilike(ships.name, `%${filter.q}%`));
@@ -58,6 +63,7 @@ export class ShipsService {
   async getById(id: string) {
     const row = await this.db.query.ships.findFirst({ where: and(eq(ships.id, id), isNull(ships.deletedAt)) });
     if (!row) throw new ApiException('SHIP_NOT_FOUND', `Ship ${id} not found`);
+    assertTenantOwns(row.tenantId, 'SHIP_NOT_FOUND', `Ship ${id} not found`);
     const [{ deviceCount }] = await this.db
       .select({ deviceCount: count(devices.id) })
       .from(devices)

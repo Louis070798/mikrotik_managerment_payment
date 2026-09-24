@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Banknote, CalendarClock, Database, Scale, UserCheck } from 'lucide-react';
 import { FinanceService, ReconciliationService } from '../api';
 import type { GlobalReconciliationResponse } from '../api/models/GlobalReconciliationResponse';
 import type { GlobalFinanceResponse } from '../api/models/GlobalFinanceResponse';
@@ -29,7 +31,15 @@ function gapStatus(pct: number | null | undefined): MetricStatus {
  * data gộp cả 2 chiều (không tách download/upload) — tách riêng từng chiều là việc của trang chi
  * tiết tàu (tab "WAN & Reconciliation"), không phải Tổng quan.
  */
+type OverviewTab = 'network' | 'finance';
+
 export const GlobalDashboard: React.FC = () => {
+    // Tach thanh 2 tab (thay vi don len 1 trang dai) -- trang goc don ca bao cao mang (traffic/doi
+    // soat) va bao cao tai chinh vao 1 lan cuon lien tuc, vi pham Hick's Law (qua nhieu thu de mat
+    // 1 luc) va nguyen tac "thiet ke toi gian" (aesthetic-minimalist) cua Nielsen. 2 mien du lieu
+    // nay cung khong lien quan filters (filters chi anh huong tab "network", tai chinh la snapshot
+    // doc lap) nen tach tab con giup DashboardFilters khong hien nham khi dang o tab khong dung den.
+    const [activeTab, setActiveTab] = useState<OverviewTab>('network');
     const [filters, setFilters] = useState(initialFilters);
     const [response, setResponse] = useState<GlobalReconciliationResponse>();
     const [loading, setLoading] = useState(true);
@@ -107,7 +117,7 @@ export const GlobalDashboard: React.FC = () => {
     const fleetCrewGap = combineGapBytes(fleet?.crew?.port_download_bytes, fleet?.crew?.port_upload_bytes, fleet?.gaps?.crew_download_gap_bytes, fleet?.gaps?.crew_upload_gap_bytes);
 
     const financeData = financeResponse?.data;
-    const financeAsOf = financeData?.as_of ? new Date(financeData.as_of).toLocaleString() : 'Not available';
+    const financeAsOf = financeData?.as_of ? new Date(financeData.as_of).toLocaleString() : 'Chưa có dữ liệu';
     const financeTotals = financeData?.totals ?? {};
     const financeExpiring = financeData?.expiring_soon ?? {};
     const financeStatus = financeData?.status_breakdown ?? {};
@@ -117,6 +127,12 @@ export const GlobalDashboard: React.FC = () => {
 
     return (
         <div>
+            <div className="tab-row" role="tablist">
+                <button type="button" role="tab" aria-selected={activeTab === 'network'} className={activeTab === 'network' ? 'active' : ''} onClick={() => setActiveTab('network')}>Tổng quan mạng</button>
+                <button type="button" role="tab" aria-selected={activeTab === 'finance'} className={activeTab === 'finance' ? 'active' : ''} onClick={() => setActiveTab('finance')}>Tài chính</button>
+            </div>
+
+            {activeTab === 'network' && <>
             <DashboardFilters value={filters} onChange={setFilters} onApply={() => void fetchData()} loading={loading} />
 
             {error && (
@@ -142,13 +158,13 @@ export const GlobalDashboard: React.FC = () => {
                     <section className="glass-panel dashboard-section">
                         <div className="section-heading"><div><h2>Tổng data &amp; độ lệch toàn hạm đội</h2><p>Cộng gộp cả download + upload. Tách riêng theo chiều xem ở trang chi tiết từng tàu.</p></div></div>
                         <div className="grid-cards">
-                            <MetricCard title="Tổng data" value={total.value} unit={total.unit} period={formatPeriod(data.period)} source="WAN, cả 2 chiều" freshness={freshnessLabel(meta)} status={fleet?.total_bytes == null ? 'unknown' : 'healthy'} />
-                            <MetricCard title="Độ lệch WAN" value={formatPercent(fleetWanGap.pct)} period={formatPeriod(data.period)} source="computeGap(WAN, CREW+BUSINESS+MANAGEMENT)" freshness={freshnessLabel(meta)} status={gapStatus(fleetWanGap.pct)} description={fleetWanGap.bytes != null ? `${formatBytes(fleetWanGap.bytes).value} ${formatBytes(fleetWanGap.bytes).unit} chưa quy được zone` : undefined} />
-                            <MetricCard title="Độ lệch CREW (port vs RADIUS)" value={formatPercent(fleetCrewGap.pct)} period={formatPeriod(data.period)} source="computeGap(CREW port, RADIUS user bytes)" freshness={freshnessLabel(meta)} status={gapStatus(fleetCrewGap.pct)} description="Lệch cao nghĩa là RADIUS accounting chưa bắt hết phiên." />
+                            <MetricCard icon={<Database size={15} />} title="Tổng data" value={total.value} unit={total.unit} period={formatPeriod(data.period)} source="WAN, cả 2 chiều" freshness={freshnessLabel(meta)} status={fleet?.total_bytes == null ? 'unknown' : 'healthy'} />
+                            <MetricCard icon={<Scale size={15} />} title="Độ lệch WAN" value={formatPercent(fleetWanGap.pct)} period={formatPeriod(data.period)} source="computeGap(WAN, CREW+BUSINESS+MANAGEMENT)" freshness={freshnessLabel(meta)} status={gapStatus(fleetWanGap.pct)} description={fleetWanGap.bytes != null ? `${formatBytes(fleetWanGap.bytes).value} ${formatBytes(fleetWanGap.bytes).unit} chưa quy được zone` : undefined} />
+                            <MetricCard icon={<Scale size={15} />} title="Độ lệch CREW (port vs RADIUS)" value={formatPercent(fleetCrewGap.pct)} period={formatPeriod(data.period)} source="computeGap(CREW port, RADIUS user bytes)" freshness={freshnessLabel(meta)} status={gapStatus(fleetCrewGap.pct)} description="Lệch cao nghĩa là RADIUS accounting chưa bắt hết phiên." />
                         </div>
                     </section>
 
-                    <section className="glass-panel dashboard-section" style={{ marginTop: 20 }}>
+                    <section className="glass-panel dashboard-section">
                         <div className="section-heading"><div><h2>Theo zone</h2><p>Tổng data thật theo từng nhóm accounting toàn hạm đội.</p></div></div>
                         <CategoryVolumeBarChart items={zoneChartItems} />
                         <div className="chip-list" style={{ marginTop: 10 }}>
@@ -159,13 +175,13 @@ export const GlobalDashboard: React.FC = () => {
                     </section>
 
                     {shipChartItems.length > 0 && (
-                        <section className="glass-panel dashboard-section" style={{ marginTop: 20 }}>
+                        <section className="glass-panel dashboard-section">
                             <div className="section-heading"><div><h2>Tổng data theo tàu (WAN)</h2><p>Top {shipChartItems.length} tàu tiêu thụ nhiều data nhất trong khoảng thời gian đã chọn.</p></div></div>
-                            <CategoryVolumeBarChart items={shipChartItems} barColor="#3b82f6" />
+                            <CategoryVolumeBarChart items={shipChartItems} barColor="#146ca8" />
                         </section>
                     )}
 
-                    <section className="glass-panel dashboard-section" style={{ marginTop: 20 }}>
+                    <section className="glass-panel dashboard-section">
                         <div className="section-heading"><div><h2>Độ lệch theo từng tàu</h2><p>Sắp theo mức lệch giảm dần — tàu lệch nhiều nhất hiện lên đầu, thường là dấu hiệu thiếu cấu hình đếm 1 zone (vd chưa gán accounting_group cho interface CREW/BUSINESS). Bấm vào tàu để xem chi tiết download/upload riêng.</p></div><span>{formatCount(data.ships?.length)} tàu</span></div>
                         {(data.ships?.length ?? 0) === 0 ? (
                             <div className="empty-state">Chưa có tàu nào có dữ liệu interface counter trong khoảng thời gian này.</div>
@@ -182,7 +198,7 @@ export const GlobalDashboard: React.FC = () => {
                                                 const shipCountedTotal = formatBytes(combineBytes(ship.counted_download_bytes, ship.counted_upload_bytes));
                                                 return (
                                                     <tr key={ship.ship_id}>
-                                                        <td><strong>{ship.ship_name}</strong><div className="muted-text">{ship.ship_code}</div></td>
+                                                        <td><Link to={`/ships?ship=${ship.ship_id}`}><strong>{ship.ship_name}</strong></Link><div className="muted-text">{ship.ship_code}</div></td>
                                                         <td>{shipWanTotal.value} {shipWanTotal.unit}</td>
                                                         <td>{shipCountedTotal.value} {shipCountedTotal.unit}</td>
                                                         <td><span className={`status-dot ${gapStatus(gap.pct)}`}>{formatPercent(gap.pct)}</span></td>
@@ -196,8 +212,9 @@ export const GlobalDashboard: React.FC = () => {
                     </section>
                 </>
             ) : null}
+            </>}
 
-            <section className="glass-panel dashboard-section" style={{ marginTop: 20 }}>
+            {activeTab === 'finance' && <section className="glass-panel dashboard-section">
                 <div className="section-heading">
                     <div>
                         <h2>Tài chính</h2>
@@ -220,6 +237,7 @@ export const GlobalDashboard: React.FC = () => {
                     <>
                         <div className="grid-cards">
                             <MetricCard
+                                icon={<Banknote size={15} />}
                                 title="Giá trị gói đang hoạt động"
                                 value={formatVnd(financeTotals.active_subscription_value_vnd)}
                                 period={financeAsOf}
@@ -229,6 +247,7 @@ export const GlobalDashboard: React.FC = () => {
                                 description="Theo giá niêm yết của gói, không phải tiền đã thu."
                             />
                             <MetricCard
+                                icon={<UserCheck size={15} />}
                                 title="Subscriber đang hoạt động"
                                 value={formatCount(financeTotals.active_subscription_count)}
                                 period={financeAsOf}
@@ -237,6 +256,7 @@ export const GlobalDashboard: React.FC = () => {
                                 status="healthy"
                             />
                             <MetricCard
+                                icon={<CalendarClock size={15} />}
                                 title={`Sắp hết hạn (${financeExpiring.within_days ?? 30} ngày tới)`}
                                 value={formatCount(financeExpiring.count)}
                                 period={financeAsOf}
@@ -324,7 +344,7 @@ export const GlobalDashboard: React.FC = () => {
                         )}
                     </>
                 ) : null}
-            </section>
+            </section>}
         </div>
     );
 };

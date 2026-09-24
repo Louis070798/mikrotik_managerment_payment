@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { and, eq, ilike, inArray, isNull, SQL } from 'drizzle-orm';
 import { DB_TOKEN, DbClient } from '@db/db.module';
-import { subscribers, tenants, packages, devices } from '@db/schema';
+import { subscribers, tenants, packages, devices, ships } from '@db/schema';
 import { ApiException } from '@common/api-exception';
+import { assertTenantOwns, currentTenantId, tenantCondition } from '@common/tenant-scope';
 import { AuditService } from '@audit/audit.service';
+import { FreeradiusAaaService } from '@freeradius-sync/freeradius-aaa.service';
 import { diffOf } from '@common/diff';
 import { hashPassword } from '@password-hash/password-hash';
 import { BulkAssignInput, CreateSubscriberInput, UpdateSubscriberInput } from './dto';
@@ -44,6 +46,9 @@ export class SubscribersService {
   constructor(
     @Inject(DB_TOKEN) private readonly db: DbClient,
     private readonly audit: AuditService,
+    // Khi RADIUS_MODE=freeradius, moi thay doi anh huong quyen dang nhap phai duoc day sang
+    // radcheck/radreply -- neu khong, sua trong app xong ma FreeRADIUS van xac thuc theo gia tri cu.
+    private readonly aaa: FreeradiusAaaService,
   ) {}
 
   private async assertTenant(tenantId: string) {
@@ -54,15 +59,29 @@ export class SubscribersService {
   private async assertPackage(packageId: string) {
     const row = await this.db.query.packages.findFirst({ where: and(eq(packages.id, packageId), isNull(packages.deletedAt)) });
     if (!row) throw new ApiException('PACKAGE_NOT_FOUND', `Package ${packageId} not found`);
+    // Khong chan thi dai ly nay gan duoc goi cuoc (va gia) cua dai ly khac cho subscriber cua minh.
+    assertTenantOwns(row.tenantId, 'PACKAGE_NOT_FOUND', `Package ${packageId} not found`);
   }
 
   private async assertDevice(deviceId: string) {
     const row = await this.db.query.devices.findFirst({ where: and(eq(devices.id, deviceId), isNull(devices.deletedAt)) });
     if (!row) throw new ApiException('DEVICE_NOT_FOUND', `Device ${deviceId} not found`);
+    // Thiet bi mang tenant qua tau cua no. Khong chan o day thi mot dai ly co the tro subscriber
+    // cua minh vao NAS cua dai ly khac.
+    if (currentTenantId() !== null) {
+      const ship = row.shipId
+        ? await this.db.query.ships.findFirst({ where: and(eq(ships.id, row.shipId), isNull(ships.deletedAt)), columns: { tenantId: true } })
+        : null;
+      assertTenantOwns(ship?.tenantId, 'DEVICE_NOT_FOUND', `Device ${deviceId} not found`);
+    }
   }
 
   async list(filter: ListSubscribersFilter) {
     const conditions: SQL[] = [isNull(subscribers.deletedAt)];
+    // Loc theo tenant cua ACTOR truoc, khong phu thuoc filter.tenantId (tham so do client dat, bo
+    // di la truoc day thay subscriber cua moi dai ly). Admin khong bi rang buoc nay.
+    const actorScope = tenantCondition(subscribers.tenantId);
+    if (actorScope) conditions.push(actorScope);
     if (filter.tenantId) conditions.push(eq(subscribers.tenantId, filter.tenantId));
     if (filter.nasDeviceId) conditions.push(eq(subscribers.nasDeviceId, filter.nasDeviceId));
     if (filter.status) conditions.push(eq(subscribers.status, filter.status as any));
@@ -80,16 +99,49 @@ export class SubscribersService {
   async getById(id: string) {
     const row = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
     if (!row) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+    assertTenantOwns(row.tenantId, 'SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
     return toApi(row);
   }
 
   /**
-   * Subscriber la 1 tai khoan dang nhap Hotspot/PPPoE that. Mat khau do ADMIN TU GO NGAY luc tao
+   * Doc mot subscriber va chan luon neu khong thuoc tenant cua actor. Moi thao tac ghi (update,
+   * remove, setPassword, resetQuota, revokePassword) deu phai di qua day — neu khong, dai ly nay
+   * doan duoc id la sua duoc ban ghi cua dai ly khac.
+   */
+  private async findOwned(id: string) {
+    const row = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
+    if (!row) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+    assertTenantOwns(row.tenantId, 'SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+    return row;
+  }
+
+  /**
+   * Subscriber la 1 tai khoan dang nhap Hotspot that. Mat khau do ADMIN TU GO NGAY luc tao
    * (input.password bat buoc) -- KHONG con tu sinh ngau nhien nua (bo tinh nang "cap mat khau" tu
    * dong theo yeu cau nguoi dung). Server chi luu ban bam (scrypt), khong bao gio tra lai mat khau
    * qua toApi() (list/get/update) vi da la thu admin tu nhap, khong can "hien 1 lan" nua.
    */
+  /**
+   * Doc lai goi cuoc roi day trang thai hien tai cua subscriber sang FreeRADIUS. Goi sau MOI thao
+   * tac lam doi quyen dang nhap (goi cuoc, trang thai, han dung, mat khau) -- khong chi luc tao.
+   * No-op khi dang chay RADIUS nhung.
+   */
+  private async syncToFreeradius(row: typeof subscribers.$inferSelect, password?: string) {
+    if (!this.aaa.enabled) return;
+    const pkg = await this.db.query.packages.findFirst({ where: eq(packages.id, row.packageId) });
+    await this.aaa.upsertSubscriber({
+      username: row.username,
+      password,
+      status: row.status,
+      expiresAt: row.expiresAt,
+      downMbps: pkg?.downMbps ?? null,
+      upMbps: pkg?.upMbps ?? null,
+    });
+  }
+
   async create(input: CreateSubscriberInput) {
+    // Dai ly khong duoc tao subscriber cho dai ly khac bang cach doi tenant_id trong body.
+    assertTenantOwns(input.tenant_id, 'TENANT_NOT_FOUND', `Tenant ${input.tenant_id} not found`);
     await this.assertTenant(input.tenant_id);
     await this.assertPackage(input.package_id);
     if (input.nas_device_id) await this.assertDevice(input.nas_device_id);
@@ -119,12 +171,12 @@ export class SubscribersService {
       .returning();
 
     await this.audit.record({ action: 'subscriber.create', resourceType: 'subscriber', resourceId: row.id, after: toApi(row), result: 'SUCCESS' });
+    await this.syncToFreeradius(row, input.password);
     return toApi(row);
   }
 
   async update(id: string, input: UpdateSubscriberInput) {
-    const beforeRow = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
-    if (!beforeRow) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+    const beforeRow = await this.findOwned(id);
 
     if (input.package_id) await this.assertPackage(input.package_id);
     if (input.nas_device_id) await this.assertDevice(input.nas_device_id);
@@ -153,15 +205,16 @@ export class SubscribersService {
       diff: diffOf(toApi(beforeRow), toApi(afterRow)),
       result: 'SUCCESS',
     });
+    await this.syncToFreeradius(afterRow);
     return toApi(afterRow);
   }
 
   async remove(id: string) {
-    const before = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
-    if (!before) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+    const before = await this.findOwned(id);
 
     await this.db.update(subscribers).set({ deletedAt: new Date() }).where(eq(subscribers.id, id));
     await this.audit.record({ action: 'subscriber.delete', resourceType: 'subscriber', resourceId: id, before: toApi(before), result: 'SUCCESS' });
+    await this.aaa.removeSubscriber(before.username);
   }
 
   async bulkAssign(input: BulkAssignInput) {
@@ -175,10 +228,14 @@ export class SubscribersService {
     if (input.package_id) patch.packageId = input.package_id;
     if (input.nas_device_id) patch.nasDeviceId = input.nas_device_id;
 
+    // Loc theo tenant cua actor. Thieu dieu kien nay thi mot dai ly chi can doan/biet id la sua
+    // duoc hang loat subscriber cua dai ly khac — va vi la UPDATE hang loat nen khong co buoc doc
+    // nao de chan lai. Id khong thuoc ve ho don gian la khong khop, khong bao loi de khoi do id.
+    const actorScope = tenantCondition(subscribers.tenantId);
     const rows = await this.db
       .update(subscribers)
       .set(patch)
-      .where(and(inArray(subscribers.id, input.subscriber_ids), isNull(subscribers.deletedAt)))
+      .where(and(inArray(subscribers.id, input.subscriber_ids), isNull(subscribers.deletedAt), ...(actorScope ? [actorScope] : [])))
       .returning();
 
     await this.audit.record({
@@ -194,14 +251,13 @@ export class SubscribersService {
   }
 
   /**
-   * Dat mat khau RADIUS cho subscriber (PPPoE/Hotspot) BANG MAT KHAU ADMIN TU GO -- khong con tu
+   * Dat mat khau RADIUS cho subscriber (Hotspot) BANG MAT KHAU ADMIN TU GO -- khong con tu
    * sinh ngau nhien (bo tinh nang "cap mat khau" tu dong). Bam scrypt luu lai, KHONG tra plaintext
    * ve nua (admin da biet minh vua go gi, khong can "hien 1 lan"). Backend tu xac thuc
    * Access-Request bang hash nay (radius-server.service.ts).
    */
   async setPassword(id: string, password: string) {
-    const before = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
-    if (!before) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+    const before = await this.findOwned(id);
 
     const passwordIssuedAt = new Date();
     await this.db
@@ -218,6 +274,10 @@ export class SubscribersService {
       result: 'SUCCESS',
     });
 
+    // Day la duong duy nhat dua mot user sang FreeRADIUS: password_hash la scrypt mot chieu nen
+    // khong the chuyen doi, phai co plaintext ngay tai day.
+    await this.syncToFreeradius({ ...before, passwordIssuedAt }, password);
+
     return { issued_at: passwordIssuedAt.toISOString() };
   }
 
@@ -227,8 +287,7 @@ export class SubscribersService {
    * de phan biet voi 1 lan sua thong tin thong thuong. Khong dong lien voi issuePassword/update.
    */
   async resetQuota(id: string) {
-    const before = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
-    if (!before) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+    const before = await this.findOwned(id);
 
     const [afterRow] = await this.db
       .update(subscribers)
@@ -249,8 +308,7 @@ export class SubscribersService {
   }
 
   async revokePassword(id: string) {
-    const before = await this.db.query.subscribers.findFirst({ where: and(eq(subscribers.id, id), isNull(subscribers.deletedAt)) });
-    if (!before) throw new ApiException('SUBSCRIBER_NOT_FOUND', `Subscriber ${id} not found`);
+    const before = await this.findOwned(id);
 
     await this.db.update(subscribers).set({ passwordHash: null, passwordIssuedAt: null, updatedAt: new Date() }).where(eq(subscribers.id, id));
 
@@ -262,5 +320,6 @@ export class SubscribersService {
       after: { password_configured: false },
       result: 'SUCCESS',
     });
+    await this.aaa.removeSubscriber(before.username);
   }
 }

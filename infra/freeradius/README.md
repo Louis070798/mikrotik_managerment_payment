@@ -1,5 +1,17 @@
 # FreeRADIUS 3.x skeleton
 
+> **Trang thai that (18/09/2026):** FreeRADIUS da cai va chay tren `aoas`, nhung CHUA cau hinh gi —
+> `rlm_sql` chua bat, `mods-available/sql` con nguyen driver `null`, `clients.conf` chua khai
+> MikroTik, ca 3 bang `radacct`/`radcheck`/`nas` deu rong. Tai lieu duoi day mo ta mo hinh DICH
+> (2 node HA) va van con dung lam muc tieu, nhung **de dung tu dau, doc `SETUP.md` trong cung thu
+> muc nay** — do la runbook theo dung hien trang, chay tuan tu duoc ngay.
+>
+> Mot dinh chinh quan trong so voi tai lieu nay: **dung `infra/postgres-aaa-schema.sql`** de nap
+> schema that. Do la ban bootstrap rut gon; phai nap schema chinh thuc di kem goi FreeRADIUS
+> (`/etc/freeradius/3.0/mods-config/sql/main/postgresql/schema.sql`), nhu chinh muc "Files can
+> trien khai" ben duoi da luu y.
+
+
 Đây là skeleton cấu hình cho FreeRADIUS-01 và FreeRADIUS-02. Chưa đánh dấu READY vì chưa có hostname/IP ZeroTier, certificate, per-NAS secret và phiên bản FreeRADIUS được chốt trên server thật.
 
 ## Mô hình
@@ -9,7 +21,12 @@
 - RouterOS cấu hình primary/secondary RADIUS qua ZeroTier.
 - Shared secret là per-NAS/per-ship, tối thiểu 32 ký tự ngẫu nhiên, lưu trong secret manager.
 - HotSpot dùng HTTPS và `http-pap` để password có thể so sánh với hash trong `radcheck`; không commit password plaintext.
-- Accounting phải bật Start/Interim/Stop. `acctinputgigawords` và `acctoutputgigawords` phải được cộng vào byte 64-bit ở parser.
+- Accounting phải bật Start/Interim/Stop.
+- ~~`acctinputgigawords` và `acctoutputgigawords` phải được cộng vào byte 64-bit ở parser.~~
+  **Sai với PostgreSQL** (đã kiểm chứng trên server thật 19/09/2026): schema PostgreSQL của
+  FreeRADIUS KHÔNG có hai cột đó. `queries.conf` gộp sẵn `(gigawords << 32) + octets` ngay lúc
+  INSERT, nên `acctinputoctets`/`acctoutputoctets` đã là giá trị 64-bit hoàn chỉnh — cộng thêm lần
+  nữa là nhân đôi sai số trên mọi phiên vượt 4 GiB. Lưu ý gốc ở trên chỉ đúng cho schema MySQL.
 
 ## Files cần triển khai trên server
 

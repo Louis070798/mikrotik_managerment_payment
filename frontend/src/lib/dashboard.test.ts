@@ -9,8 +9,8 @@ import {
 } from './dashboard';
 
 test('keeps unavailable numeric values explicit instead of converting them to zero', () => {
-    expect(formatBytes(null)).toEqual({ value: 'Not available', unit: '' });
-    expect(formatCount(undefined)).toBe('Not available');
+    expect(formatBytes(null)).toEqual({ value: 'Chưa có dữ liệu', unit: '' });
+    expect(formatCount(undefined)).toBe('Chưa có dữ liệu');
     expect(formatRate(1_500_000)).toEqual({ value: '1.50', unit: 'Mbit/s' });
 });
 

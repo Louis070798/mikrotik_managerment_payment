@@ -16,7 +16,8 @@ const emptyCreateForm = {
     username: '',
     password: '',
     display_name: '',
-    auth_type: Subscriber.auth_type.PPPOE,
+    // He thong chi chay Hotspot -- PPPoE van con trong enum cho du lieu cu, khong phai mac dinh.
+    auth_type: Subscriber.auth_type.HOTSPOT,
     package_id: '',
     nas_device_id: '',
     expires_at: '',
@@ -212,7 +213,7 @@ export const Users: React.FC = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                <KpiCard icon={<UsersIcon size={20} color="#fff" />} iconBg="#3b82f6" label="Tổng người dùng" value={formatCount(kpiTotal)} />
+                <KpiCard icon={<UsersIcon size={20} color="#fff" />} iconBg="#146ca8" label="Tổng người dùng" value={formatCount(kpiTotal)} />
                 <KpiCard icon={<Wifi size={20} color="#fff" />} iconBg="#10b981" label="Đang hoạt động" value={formatCount(kpiActive)} />
                 <KpiCard icon={<UserX size={20} color="#fff" />} iconBg="#f59e0b" label="Đã hết hạn" value={formatCount(kpiExpired)} />
                 <KpiCard icon={<BarChart3 size={20} color="#fff" />} iconBg="#8b5cf6" label="Tổng dung lượng đã dùng" value={`${formatBytes(kpiTrafficBytes).value} ${formatBytes(kpiTrafficBytes).unit}`} />
@@ -317,8 +318,8 @@ export const Users: React.FC = () => {
                             <label className="filter-control"><span>Tên hiển thị (tuỳ chọn)</span><input className="filter-select" value={createForm.display_name} onChange={e => setCreateForm({ ...createForm, display_name: e.target.value })} placeholder="vd: Nguyễn Văn A" /></label>
                             <label className="filter-control"><span>Loại</span>
                                 <select className="filter-select" value={createForm.auth_type} onChange={e => setCreateForm({ ...createForm, auth_type: e.target.value as Subscriber.auth_type })}>
-                                    <option value="PPPOE">PPPoE</option>
                                     <option value="HOTSPOT">Hotspot</option>
+                                    <option value="PPPOE">PPPoE (không dùng)</option>
                                 </select>
                             </label>
                             <label className="filter-control"><span>MikroTik (NAS)</span>
